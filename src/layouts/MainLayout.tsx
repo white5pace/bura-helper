@@ -1,20 +1,21 @@
 import { Outlet } from "react-router-dom";
+import logo from "../assets/logo.svg";
+import styles from "./MainLayout.module.css";
 
 function MainLayout() {
   return (
-    <div>
-      <header>
-        <h1>БурКозел</h1>
+    <div className={styles["container"]}>
+      <header className={styles["header"]}>
+        <div className={styles["logo"]}>
+          <img src={logo} alt="logo" />
+          <h1 className={styles["logo-text"]}>БурКозел</h1>
+        </div>
       </header>
-      <div className="container">
+      <div className="content">
         <Outlet />
       </div>
     </div>
   );
 }
-
-// я вижу страницу на ней header делаем его это иконка и надпись шрифта который уже подключил
-// потом кнопки из shadcn начать новую и продолжить
-// кнопка начать новая перебрасывает на страницу с выбором участников
 
 export default MainLayout;

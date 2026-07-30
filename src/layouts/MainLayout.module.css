@@ -1,0 +1,19 @@
+.container {
+  padding: 20px;
+}
+
+.header {
+  margin-bottom: 40px;
+}
+
+.logo {
+  height: 50px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.logo-text {
+  margin: 0;
+}
