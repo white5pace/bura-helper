@@ -1,0 +1,53 @@
+:root {
+  --text: #2b2b29;
+  --bg: #fff;
+  --accent: #d4453d;
+
+  --sans: "Play", sans-serif;
+  --heading: "Underdog", system-ui;
+
+  font: 20px/150% var(--sans);
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  /* smartphone only */
+  width: 100%;
+  max-width: 780px;
+
+  margin: 0 auto;
+  text-align: center;
+  height: 100vh;
+
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-family: var(--heading);
+  font-weight: 400;
+  font-size: 32px;
+  letter-spacing: 1px;
+  margin: 32px 0;
+}
+
+h2 {
+  font-weight: 700;
+  font-size: 24px;
+  margin: 0 0 24px;
+}
+
+p {
+  margin: 0;
+}
