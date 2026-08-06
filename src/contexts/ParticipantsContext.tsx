@@ -55,6 +55,9 @@ interface ParticipantsContextValue {
   updatePlayer: (id: string, name: string) => void;
   addTeam: (name: string, playerIds: string[]) => Team;
   updateTeam: (id: string, name: string, playerIds: string[]) => void;
+  getTeamsByPlayerId: (id: string) => Team[];
+  deletePlayer: (id: string) => void;
+  deleteTeam: (id: string) => void;
 }
 
 const ParticipantsContext = createContext<ParticipantsContextValue | null>(
@@ -127,6 +130,20 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const getTeamsByPlayerId = useCallback(
+    (id: string) => teams.filter((team) => team.playerIds.includes(id)),
+    [teams],
+  );
+
+  const deleteTeam = useCallback((id: string) => {
+    setTeams((prev) => prev.filter((team) => team.id !== id));
+  }, []);
+
+  const deletePlayer = useCallback((id: string) => {
+    setTeams((prev) => prev.filter((team) => !team.playerIds.includes(id)));
+    setPlayers((prev) => prev.filter((player) => player.id !== id));
+  }, []);
+
   const value = useMemo(
     () => ({
       players,
@@ -137,6 +154,9 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       updatePlayer,
       addTeam,
       updateTeam,
+      getTeamsByPlayerId,
+      deletePlayer,
+      deleteTeam,
     }),
     [
       players,
@@ -147,6 +167,9 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       updatePlayer,
       addTeam,
       updateTeam,
+      getTeamsByPlayerId,
+      deletePlayer,
+      deleteTeam,
     ],
   );
 

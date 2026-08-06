@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { PlusIcon, PencilIcon } from "lucide-react";
+import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   type Player,
@@ -11,14 +11,26 @@ import {
   useParticipants,
 } from "@/contexts/ParticipantsContext";
 import SecondHeader from "@/shared/ui/SecondHeader";
+import DeleteConfirmDialog from "@/shared/ui/DeleteConfirmDialog";
+
+type DeleteTarget =
+  | { type: "player"; id: string }
+  | { type: "team"; id: string }
+  | null;
 
 interface PlayerRowProps {
   player: Player;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  onDelete: () => void;
 }
 
-function PlayerRow({ player, checked, onCheckedChange }: PlayerRowProps) {
+function PlayerRow({
+  player,
+  checked,
+  onCheckedChange,
+  onDelete,
+}: PlayerRowProps) {
   const navigate = useNavigate();
 
   return (
@@ -33,15 +45,24 @@ function PlayerRow({ player, checked, onCheckedChange }: PlayerRowProps) {
         {player.name}
       </FieldLabel>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="ml-auto"
-        aria-label={`Редактировать ${player.name}`}
-        onClick={() => navigate(`/participants/player/${player.id}`)}
-      >
-        <PencilIcon />
-      </Button>
+      <div className="ml-auto flex shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Редактировать ${player.name}`}
+          onClick={() => navigate(`/participants/player/${player.id}`)}
+        >
+          <PencilIcon />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Удалить ${player.name}`}
+          onClick={onDelete}
+        >
+          <Trash2Icon />
+        </Button>
+      </div>
     </Field>
   );
 }
@@ -50,9 +71,10 @@ interface TeamRowProps {
   team: Team;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
+  onDelete: () => void;
 }
 
-function TeamRow({ team, checked, onCheckedChange }: TeamRowProps) {
+function TeamRow({ team, checked, onCheckedChange, onDelete }: TeamRowProps) {
   const navigate = useNavigate();
 
   return (
@@ -67,27 +89,44 @@ function TeamRow({ team, checked, onCheckedChange }: TeamRowProps) {
         {team.name}
       </FieldLabel>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="ml-auto"
-        aria-label={`Редактировать ${team.name}`}
-        onClick={() => navigate(`/participants/team/${team.id}`)}
-      >
-        <PencilIcon />
-      </Button>
+      <div className="ml-auto flex shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Редактировать ${team.name}`}
+          onClick={() => navigate(`/participants/team/${team.id}`)}
+        >
+          <PencilIcon />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={`Удалить ${team.name}`}
+          onClick={onDelete}
+        >
+          <Trash2Icon />
+        </Button>
+      </div>
     </Field>
   );
 }
 
 function Participants() {
   const navigate = useNavigate();
-  const { players, teams } = useParticipants();
+  const {
+    players,
+    teams,
+    getPlayerById,
+    getTeamById,
+    getTeamsByPlayerId,
+    deletePlayer,
+    deleteTeam,
+  } = useParticipants();
 
   const [currentTab, setCurrentTab] = useState<"players" | "teams">("players");
-
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [selectedTeams, setSelectedTeams] = useState<Set<string>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget>(null);
 
   const handleSelectRow = (id: string, checked: boolean) => {
     const newSelected = new Set(selectedRows);
@@ -115,6 +154,72 @@ function Participants() {
     } else {
       navigate("/participants/team");
     }
+  };
+
+  const deleteDialogContent = useMemo(() => {
+    if (!deleteTarget) {
+      return { title: "", description: "" };
+    }
+
+    if (deleteTarget.type === "team") {
+      const team = getTeamById(deleteTarget.id);
+      if (!team) {
+        return { title: "", description: "" };
+      }
+
+      return {
+        title: "Удалить команду?",
+        description: `Вы уверены, что хотите удалить команду «${team.name}»?`,
+      };
+    }
+
+    const player = getPlayerById(deleteTarget.id);
+    if (!player) {
+      return { title: "", description: "" };
+    }
+
+    const relatedTeams = getTeamsByPlayerId(deleteTarget.id);
+    const teamsMessage =
+      relatedTeams.length > 0
+        ? `\n\nТакже будут удалены команды: ${relatedTeams.map((team) => `«${team.name}»`).join(", ")}.`
+        : "";
+
+    return {
+      title: "Удалить игрока?",
+      description: `Вы уверены, что хотите удалить игрока «${player.name}»?${teamsMessage}`,
+    };
+  }, [deleteTarget, getPlayerById, getTeamById, getTeamsByPlayerId]);
+
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) {
+      return;
+    }
+
+    if (deleteTarget.type === "player") {
+      const relatedTeams = getTeamsByPlayerId(deleteTarget.id);
+      deletePlayer(deleteTarget.id);
+      setSelectedRows((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
+      if (relatedTeams.length > 0) {
+        setSelectedTeams((prev) => {
+          const next = new Set(prev);
+          relatedTeams.forEach((team) => next.delete(team.id));
+          return next;
+        });
+      }
+    } else {
+      deleteTeam(deleteTarget.id);
+      setSelectedTeams((prev) => {
+        const next = new Set(prev);
+        next.delete(deleteTarget.id);
+        return next;
+      });
+    }
+
+    setDeleteTarget(null);
   };
 
   return (
@@ -162,6 +267,9 @@ function Participants() {
                     onCheckedChange={(checked) =>
                       handleSelectRow(player.id, checked)
                     }
+                    onDelete={() =>
+                      setDeleteTarget({ type: "player", id: player.id })
+                    }
                   />
                 ))
               )}
@@ -185,6 +293,9 @@ function Participants() {
                     onCheckedChange={(checked) =>
                       handleSelectTeam(team.id, checked)
                     }
+                    onDelete={() =>
+                      setDeleteTarget({ type: "team", id: team.id })
+                    }
                   />
                 ))
               )}
@@ -192,6 +303,18 @@ function Participants() {
           </FieldSet>
         </TabsContent>
       </Tabs>
+
+      <DeleteConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null);
+          }
+        }}
+        title={deleteDialogContent.title}
+        description={deleteDialogContent.description}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
