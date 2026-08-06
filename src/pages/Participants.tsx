@@ -5,6 +5,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { type Player, usePlayers } from "@/contexts/PlayersContext";
+import SecondHeader from "@/shared/ui/SecondHeader";
 
 interface PlayerRowProps {
   player: Player;
@@ -13,6 +15,8 @@ interface PlayerRowProps {
 }
 
 function PlayerRow({ player, checked, onCheckedChange }: PlayerRowProps) {
+  const navigate = useNavigate();
+
   return (
     <Field orientation="horizontal">
       <Checkbox
@@ -25,33 +29,28 @@ function PlayerRow({ player, checked, onCheckedChange }: PlayerRowProps) {
         {player.name}
       </FieldLabel>
 
-      <Button variant="ghost" size="icon" className="ml-auto">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="ml-auto"
+        aria-label={`Редактировать ${player.name}`}
+        onClick={() => navigate(`/participants/player/${player.id}`)}
+      >
         <PencilIcon />
       </Button>
     </Field>
   );
 }
 
-interface Player {
-  id: number;
-  name: string;
-}
-
-const players: Player[] = [
-  { id: 1, name: "Роман" },
-  { id: 2, name: "Ирина" },
-  { id: 3, name: "Анастасия" },
-  { id: 4, name: "Колян" },
-];
-
 function Participants() {
   const navigate = useNavigate();
+  const { players } = usePlayers();
 
   const [currentTab, setCurrentTab] = useState<"players" | "teams">("players");
 
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
 
-  const handleSelectRow = (id: number, checked: boolean) => {
+  const handleSelectRow = (id: string, checked: boolean) => {
     const newSelected = new Set(selectedRows);
     if (checked) {
       newSelected.add(id);
@@ -59,31 +58,32 @@ function Participants() {
       newSelected.delete(id);
     }
     setSelectedRows(newSelected);
-
-    console.log(newSelected);
   };
 
   const addParticipant = () => {
     if (currentTab === "players") {
-      navigate("/participant/player");
+      navigate("/participants/player");
     } else {
-      navigate("/participant/team");
+      navigate("/participants/team");
     }
   };
 
   return (
     <div>
-      <div className="flex">
-        <h2 className="m-0!">Выберите участников </h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto"
-          onClick={addParticipant}
-        >
-          <PlusIcon />
-        </Button>
-      </div>
+      <SecondHeader
+        actions={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={addParticipant}
+          >
+            <PlusIcon />
+          </Button>
+        }
+      >
+        Выберите участников
+      </SecondHeader>
 
       <Tabs
         value={currentTab}
@@ -100,16 +100,22 @@ function Participants() {
         <TabsContent value="players">
           <FieldSet>
             <FieldGroup className="gap-3">
-              {players.map((player) => (
-                <PlayerRow
-                  key={player.id}
-                  player={player}
-                  checked={selectedRows.has(player.id)}
-                  onCheckedChange={(checked) =>
-                    handleSelectRow(player.id, checked)
-                  }
-                />
-              ))}
+              {players.length === 0 ? (
+                <p className="text-muted-foreground">
+                  Нет игроков. Нажмите +, чтобы добавить.
+                </p>
+              ) : (
+                players.map((player) => (
+                  <PlayerRow
+                    key={player.id}
+                    player={player}
+                    checked={selectedRows.has(player.id)}
+                    onCheckedChange={(checked) =>
+                      handleSelectRow(player.id, checked)
+                    }
+                  />
+                ))
+              )}
             </FieldGroup>
           </FieldSet>
         </TabsContent>

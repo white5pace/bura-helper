@@ -13,7 +13,7 @@ function MainLayout() {
           <h1 className={styles["logo-text"]}>БурКозел</h1>
         </div>
       </header>
-      <div className="content">
+      <div className={styles.content}>
         <Outlet />
       </div>
     </div>
