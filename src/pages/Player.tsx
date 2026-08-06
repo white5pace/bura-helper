@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel, FieldError } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { usePlayers } from "@/contexts/PlayersContext";
+import { useParticipants } from "@/contexts/ParticipantsContext";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 import { Controller, useForm } from "react-hook-form";
@@ -15,7 +15,7 @@ const PLAYER_FORM_ID = "player-form";
 function Player() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { getPlayerById, updatePlayer, addPlayer, players } = usePlayers();
+  const { getPlayerById, updatePlayer, addPlayer, players } = useParticipants();
 
   const player = id ? getPlayerById(id) : undefined;
 
