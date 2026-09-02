@@ -1,0 +1,27 @@
+---
+description: Оркестрация sub-agents — роли, pipeline, правила контекста
+alwaysApply: false
+---
+
+# Агенты bura-helper
+
+Оркестратор: skill **`team-orchestrator`** (`.cursor/skills/team-orchestrator/`).  
+Sub-agents: `.cursor/agents/*.md`.  
+Активная задача: `src/docs/tasks/current.md`.
+
+## Pipeline
+
+Team Lead → [Design Implementer] → Frontend Developer → Test Writer → Reviewer → QA Tester → [Design Tester]
+
+Циклы исправлений: test-writer / reviewer / qa-tester / design-tester → frontend-developer (или design-implementer) → повтор цепочки.
+
+## Правила
+
+- Figma — только Design Implementer и Design Tester
+- Frontend Developer — spec + Layout Spec (`src/docs/layouts/`), **без Figma**
+- Task packet: `src/docs/task-packet.template.md` → `src/docs/tasks/current.md`
+- Запуск: «Используй skill team-orchestrator»
+
+## Стек (кратко)
+
+React 19, TypeScript, Vite, shadcn/ui, Context + localStorage, RHF + zod, UI на русском.

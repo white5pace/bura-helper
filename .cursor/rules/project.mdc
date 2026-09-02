@@ -1,0 +1,21 @@
+---
+description: Стек и архитектурные правила bura-helper
+alwaysApply: true
+---
+
+# Bura Helper — правила проекта
+
+Полная техническая спека: `src/docs/tech.md`.
+
+Продуктовая спека страниц — в `src/docs/spec.md` и `src/docs/pages/`. Конкретную страницу для реализации пользователь указывает в задаче и прикладывает ссылку на спеку — следовать ей.
+
+## Обязательно
+
+- React 19 + TypeScript + Vite
+- UI только shadcn/ui (`src/components/ui/`)
+- Данные в localStorage
+- Глобальное состояние только React Context (`src/contexts/`)
+- Без Redux, Zustand, Jotai, MobX и других сторонних сторов
+- Формы: react-hook-form + zod
+- UI и ошибки — на русском
+- Минимальный diff, без лишнего рефакторинга
