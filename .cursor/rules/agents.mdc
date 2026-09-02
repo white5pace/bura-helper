@@ -11,9 +11,9 @@ Sub-agents: `.cursor/agents/*.md`.
 
 ## Pipeline
 
-Team Lead → [Design Implementer] → Frontend Developer → Test Writer → Reviewer → QA Tester → [Design Tester]
+Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester → [Design Tester]
 
-Циклы исправлений: test-writer / reviewer / qa-tester / design-tester → frontend-developer (или design-implementer) → повтор цепочки.
+Циклы исправлений: reviewer / test-writer / qa-tester / design-tester → frontend-developer (или design-implementer) → повтор цепочки.
 
 ## Правила
 

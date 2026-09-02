@@ -1,15 +1,16 @@
 # Task Packet
 
-> Шаблон входа от **Team Lead**. Копируйте в чат или передавайте orchestrating-агенту.
+> Шаблон входа от **Team Lead**. Копируйте в `src/docs/tasks/current.md` или передавайте orchestrating-агенту.
 
 ---
 
 ## Task: <название>
 
-**Type:** feature | design | infra | cleanup  
-**Priority:** P1 | P2 | P3 | P4
+**Type:** feature | design | infra | cleanup
 
-**Spec:** `src/docs/pages/<page>.md` (раздел: P1)  
+**Описание:** что нужно сделать в рамках этой задачи (свободный текст)
+
+**Spec:** `src/docs/pages/<page>.md`  
 **Todo:** `todo.md` → §<N>, пункты: ...  
 **Route:** `/path`
 
@@ -19,16 +20,13 @@
 **Layout:** `src/docs/layouts/<page>.md` | `pending`  
 → `pending` = сначала Design Implementer, потом Frontend Developer
 
-**Design deps:** `Button variant="..."` | `none`  
 **Code refs:** файлы-эталоны (например `src/pages/Player.tsx`)
 
 **Out of scope:** что НЕ трогать
 
-**Acceptance:** чеклист из todo (копия пунктов)
-
 **Tests:** unit | integration | none
 
-**Sub-agents:** design-implementer → frontend-developer → test-writer → reviewer → qa-tester → [design-tester]
+**Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester → [design-tester]
 
 **Task file:** скопировать в `src/docs/tasks/current.md` и запустить skill `team-orchestrator`
 
@@ -36,6 +34,7 @@
 
 ## Чеклист Team Lead
 
+- [ ] Описание задачи заполнено
 - [ ] Spec-страница указана
 - [ ] Пункты todo — конкретная секция, не весь файл
 - [ ] Figma или явно `none`

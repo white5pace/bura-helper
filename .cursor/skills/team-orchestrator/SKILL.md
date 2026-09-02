@@ -2,8 +2,8 @@
 name: team-orchestrator
 description: >-
   Orchestrates bura-helper development pipeline: reads task from src/docs/tasks/,
-  delegates to sub-agents (design-implementer, frontend-developer, test-writer,
-  reviewer, qa-tester, design-tester) with feedback loops until task passes.
+  delegates to sub-agents (design-implementer, frontend-developer, reviewer,
+  test-writer, qa-tester, design-tester) with feedback loops until task passes.
   Use when user asks to run a task, execute pipeline, or says "оркестратор".
 disable-model-invocation: true
 ---
@@ -16,7 +16,7 @@ You are **Team Lead**. You do not implement code yourself — you read the task,
 
 1. Read **`src/docs/tasks/current.md`** — active task.
 2. If empty or placeholder — ask user to fill it (copy from `src/docs/task-packet.template.md`).
-3. Parse: Type, Spec, Todo, Route, Figma, Layout, Acceptance, Tests, Out of scope.
+3. Parse: Type, Описание, Spec, Todo, Route, Figma, Layout, Tests, Out of scope.
 
 ## Sub-agents (`.cursor/agents/`)
 
@@ -24,9 +24,9 @@ You are **Team Lead**. You do not implement code yourself — you read the task,
 |-------|------|
 | `design-implementer` | New UI primitives, Layout Spec pending, Figma link |
 | `frontend-developer` | Feature implementation, fixes from any stage |
-| `test-writer` | After frontend; writes Vitest tests |
-| `reviewer` | After tests pass; spec + tech.md compliance |
-| `qa-tester` | Business logic vs acceptance criteria |
+| `reviewer` | After frontend; spec + tech.md compliance |
+| `test-writer` | After reviewer pass; writes Vitest tests |
+| `qa-tester` | Business logic vs Описание + spec |
 | `design-tester` | New UI components + Figma frame exists |
 
 ## Pipeline
@@ -37,13 +37,13 @@ flowchart TD
   DI -->|Layout pending / new UI| DI_A[design-implementer]
   DI -->|no| FE[frontend-developer]
   DI_A --> FE
-  FE --> TW[test-writer]
-  TW --> TF{Tests pass?}
-  TF -->|no| FE
-  TF -->|yes| REV[reviewer]
+  FE --> REV[reviewer]
   REV --> RF{Review pass?}
   RF -->|no| FE
-  RF -->|yes| QA[qa-tester]
+  RF -->|yes| TW[test-writer]
+  TW --> TF{Tests pass?}
+  TF -->|no| FE
+  TF -->|yes| QA[qa-tester]
   QA --> QF{Business logic OK?}
   QF -->|no| FE
   QF -->|yes| DT{New UI + Figma?}
@@ -64,19 +64,19 @@ Launch sub-agents via **Task tool** with `subagent_type` matching the role (or r
 
 | Failure from | Return to | Then re-run |
 |--------------|-----------|-------------|
-| test-writer (tests fail) | frontend-developer | test-writer → reviewer → qa-tester → [design-tester] |
-| reviewer (spec/arch gaps) | frontend-developer | test-writer → reviewer → qa-tester → [design-tester] |
-| qa-tester (business errors) | frontend-developer | test-writer → reviewer → qa-tester → [design-tester] |
+| reviewer (spec/arch gaps) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
+| test-writer (tests fail) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
+| qa-tester (business errors) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
 | design-tester (visual gaps) | design-implementer | frontend-developer → … full chain |
 
 **Max iterations:** 3 per loop stage. If stuck — report blocker to user.
 
 ### 3. Skip rules
 
-- **design-implementer:** skip if `Layout: src/docs/layouts/<page>.md` exists and `Design deps: none`
+- **design-implementer:** skip if `Layout: src/docs/layouts/<page>.md` exists (not `pending`)
 - **design-tester:** skip if `Figma: none` or no new UI components
 - **test-writer:** skip if `Tests: none` (logic-only infra tasks)
-- **qa-tester:** always run for feature tasks with acceptance criteria
+- **qa-tester:** always run for feature tasks with Описание
 
 ### 4. Context isolation
 
@@ -101,7 +101,7 @@ Launch sub-agents via **Task tool** with `subagent_type` matching the role (or r
 
 Before marking task done, verify:
 
-- [ ] All acceptance items from current.md implemented
+- [ ] Описание задачи из current.md выполнено
 - [ ] `npm run lint` passes
 - [ ] `npm test` passes (if Tests ≠ none)
 - [ ] reviewer: Pass

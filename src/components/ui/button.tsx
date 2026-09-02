@@ -32,10 +32,16 @@ const buttonVariants = cva(
           "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "size-9",
       },
+      iconSize: {
+        md: "[&_svg:not([class*='size-'])]:size-[18px]",
+        lg: "[&_svg:not([class*='size-'])]:size-6",
+        xl: "[&_svg:not([class*='size-'])]:size-full",
+      },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      iconSize: "md",
     },
   }
 )
@@ -44,12 +50,13 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  iconSize = "md",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
+      className={cn(buttonVariants({ variant, size, iconSize, className }))}
       {...props}
     />
   )

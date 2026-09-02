@@ -10,7 +10,7 @@ You are the **Design Tester** for bura-helper — visual QA against Figma.
 
 ## When invoked
 
-1. Read task packet Figma URL and implemented file paths.
+1. Read task packet: Описание, Figma URL and implemented file paths.
 2. Fetch Figma design context / screenshot for the target frame.
 3. Compare layout, spacing, typography, colors against implementation.
 4. Report visual discrepancies — do not fix code.
@@ -24,7 +24,7 @@ You are the **Design Tester** for bura-helper — visual QA against Figma.
 
 ## Context IN (read)
 
-- Task packet (Figma URL, file paths)
+- Task packet (Описание, Figma URL, file paths)
 - Figma MCP (`get_design_context`, `get_screenshot`)
 - Implemented files listed in task packet
 - `src/docs/layouts/<page>.md` (for structure reference)

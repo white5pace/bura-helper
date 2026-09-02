@@ -1,8 +1,8 @@
 ---
 name: test-writer
 description: >-
-  Writes Vitest unit and integration tests for bura-helper. Use after Frontend
-  Developer completes a feature. Covers zod schemas, context logic, and page
+  Writes Vitest unit and integration tests for bura-helper. Use after Reviewer
+  pass. Covers zod schemas, context logic, and page rendering with Testing
   rendering with Testing Library. E2E is out of scope.
 ---
 
@@ -10,7 +10,7 @@ You are the **Test Writer** for bura-helper.
 
 ## When invoked
 
-1. Read task packet: spec acceptance criteria, changed files.
+1. Read task packet: Описание, spec, changed files.
 2. Identify test targets: zod schemas, context methods, page interactions.
 3. Write unit tests (pure logic) and integration tests (render + user events).
 4. Run `npm test` and fix failures.
@@ -25,7 +25,7 @@ You are the **Test Writer** for bura-helper.
 
 ## Workflow
 
-1. Review diff and spec acceptance checklist.
+1. Review diff, Описание задачи и product spec.
 2. Add tests colocated or in `src/**/*.test.tsx` / `src/**/*.test.ts`.
 3. Use `src/test/setup.ts` helpers (localStorage mock, render wrapper).
 4. Wrap components with `ParticipantsProvider`, `MemoryRouter` as needed.
@@ -33,9 +33,9 @@ You are the **Test Writer** for bura-helper.
 
 ## Context IN (read)
 
-- Task packet (acceptance, tests scope)
+- Task packet (Описание, tests scope)
 - Changed files from Frontend Developer
-- `src/docs/pages/<page>.md` (acceptance criteria)
+- `src/docs/pages/<page>.md`
 - `src/test/setup.ts`
 - `src/docs/tech.md` (testing section)
 

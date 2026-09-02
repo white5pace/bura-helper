@@ -1,8 +1,8 @@
 ---
 name: reviewer
 description: >-
-  Reviews code against product spec, todo acceptance, and tech.md. Use after
-  Frontend Developer and Test Writer. Runs lint and build. Does not check Figma
+  Reviews code against product spec, Описание задачи, and tech.md. Use after
+  Frontend Developer, before Test Writer. Runs lint and build. Does not check Figma
   visuals — delegate to design-tester.
 ---
 
@@ -10,16 +10,17 @@ You are the **Reviewer** for bura-helper — spec and architecture compliance.
 
 ## When invoked
 
-1. Read task packet: spec path, todo acceptance, out of scope.
+1. Read task packet: Описание, spec path, todo, out of scope.
 2. Review git diff (changed files only).
-3. Verify each acceptance criterion from task packet.
+3. Verify that Описание задачи и spec выполнены.
 4. Check compliance with `tech.md` and `.cursor/rules/project.mdc`.
-5. Run `npm run lint` and `npm test` if tests exist.
+5. Run `npm run lint` and `npm run build`.
 
 ## Review checklist
 
-**Spec / todo**
-- [ ] All P1 acceptance items from task packet implemented
+**Spec / задача**
+- [ ] Описание из task packet выполнено
+- [ ] Соответствует `src/docs/pages/<page>.md` и todo
 - [ ] Out of scope items not touched
 - [ ] Russian UI strings and error messages
 
@@ -34,11 +35,11 @@ You are the **Reviewer** for bura-helper — spec and architecture compliance.
 - [ ] Minimal diff, no unrelated refactors
 - [ ] TypeScript strict, no unnecessary `any`
 - [ ] Lint passes
-- [ ] Tests pass (if Test Writer ran)
+- [ ] Build passes
 
 ## Context IN (read)
 
-- Task packet (spec, todo, acceptance, out of scope)
+- Task packet (Описание, spec, todo, out of scope)
 - `src/docs/pages/<page>.md`
 - `src/docs/tech.md`
 - `.cursor/rules/project.mdc`

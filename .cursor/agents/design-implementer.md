@@ -10,7 +10,7 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 
 ## When invoked
 
-1. Read the task packet Figma link and target scope (components vs layout).
+1. Read task packet: Описание, Figma link and target scope (components vs layout).
 2. Use Figma MCP tools (`get_design_context`, design-to-code skills) to extract visual specs.
 3. Implement UI primitives in `src/components/ui/` and tokens in `src/index.css` if needed.
 4. Create or update Layout Spec at `src/docs/layouts/<page>.md` using `_template.md`.
@@ -26,7 +26,7 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 
 ## Context IN (read)
 
-- Task packet (Figma URL, page name)
+- Task packet (Описание, Figma URL, page name)
 - `src/components/ui/`
 - `src/index.css`
 - `src/docs/layouts/_template.md`

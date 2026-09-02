@@ -5,27 +5,23 @@
 
 ---
 
-**Type:** feature | design | infra | cleanup  
-**Priority:** P1 | P2 | P3 | P4
+**Type:** feature | design | infra | cleanup
 
-**Spec:** `src/docs/pages/<page>.md` (раздел: P1)  
-**Todo:** `todo.md` → §<N>, пункты: ...  
+**Описание:** …
+
+**Spec:** `src/docs/pages/<page>.md`  
+**Todo:** `todo.md` → …  
 **Route:** `/path`
 
 **Figma:** `<url>` | `none`  
 **Layout:** `src/docs/layouts/<page>.md` | `pending`  
-**Design deps:** `Button variant="..."` | `none`  
-**Code refs:** `src/pages/Player.tsx`, …
+**Code refs:** …
 
 **Out of scope:** …
 
-**Acceptance:**
-- [ ] …
-- [ ] …
-
 **Tests:** unit | integration | none
 
-**Status:** pending | in_progress | done
+**Status:** pending
 
 ---
 

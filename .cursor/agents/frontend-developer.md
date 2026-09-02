@@ -10,7 +10,7 @@ You are the **Frontend Developer** for bura-helper.
 
 ## When invoked
 
-1. Read task packet: spec path, todo acceptance, route, code refs.
+1. Read task packet: Описание, spec path, todo, route, code refs.
 2. Read product spec (`src/docs/pages/<page>.md`) for **what** to build.
 3. Read Layout Spec (`src/docs/layouts/<page>.md`) for **how to compose** UI.
 4. Use existing `@/components/ui/*` and `@/shared/ui/*` — do not open Figma.
@@ -26,7 +26,7 @@ You are the **Frontend Developer** for bura-helper.
 
 ## Context IN (read)
 
-- Task packet (spec, layout, todo, code refs, out of scope)
+- Task packet (Описание, spec, layout, todo, code refs, out of scope)
 - `src/docs/pages/<page>.md`
 - `src/docs/layouts/<page>.md` (if exists)
 - `src/docs/tech.md`
