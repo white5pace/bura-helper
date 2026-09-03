@@ -3,7 +3,7 @@ name: team-orchestrator
 description: >-
   Orchestrates bura-helper development pipeline: reads task from src/docs/tasks/,
   delegates to sub-agents (design-implementer, frontend-developer, reviewer,
-  test-writer, qa-tester, design-tester) with feedback loops until task passes.
+  test-writer, qa-tester) with feedback loops until task passes.
   Use when user asks to run a task, execute pipeline, or says "оркестратор".
 disable-model-invocation: true
 ---
@@ -24,10 +24,11 @@ You are **Team Lead**. You do not implement code yourself — you read the task,
 |-------|------|
 | `design-implementer` | New UI primitives, Layout Spec pending, Figma link |
 | `frontend-developer` | Feature implementation, fixes from any stage |
-| `reviewer` | After frontend; spec + tech.md compliance |
+| `reviewer` | After frontend; spec + tech.md + Layout Spec |
 | `test-writer` | After reviewer pass; writes Vitest tests |
-| `qa-tester` | Business logic vs Описание + spec |
-| `design-tester` | New UI components + Figma frame exists |
+| `qa-tester` | Business logic vs Описание + spec; composition vs Layout Spec |
+
+Роли **design-tester нет**. Не запускай `design-tester`.
 
 ## Pipeline
 
@@ -44,14 +45,9 @@ flowchart TD
   TW --> TF{Tests pass?}
   TF -->|no| FE
   TF -->|yes| QA[qa-tester]
-  QA --> QF{Business logic OK?}
+  QA --> QF{Logic + layout OK?}
   QF -->|no| FE
-  QF -->|yes| DT{New UI + Figma?}
-  DT -->|yes| DT_A[design-tester]
-  DT -->|no| DONE[Accept task]
-  DT_A --> DF{Visual OK?}
-  DF -->|no| DI_A
-  DF -->|yes| DONE
+  QF -->|yes| DONE[Accept task]
 ```
 
 ## Execution rules
@@ -64,25 +60,28 @@ Launch sub-agents via **Task tool** with `subagent_type` matching the role (or r
 
 | Failure from | Return to | Then re-run |
 |--------------|-----------|-------------|
-| reviewer (spec/arch gaps) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
-| test-writer (tests fail) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
-| qa-tester (business errors) | frontend-developer | reviewer → test-writer → qa-tester → [design-tester] |
-| design-tester (visual gaps) | design-implementer | frontend-developer → … full chain |
+| reviewer (spec/arch/layout gaps) | frontend-developer | reviewer → test-writer → qa-tester |
+| test-writer (tests fail) | frontend-developer | reviewer → test-writer → qa-tester |
+| qa-tester (logic or layout composition) | frontend-developer | reviewer → test-writer → qa-tester |
+| qa-tester (missing primitive / Layout Spec wrong) | design-implementer | frontend-developer → full chain |
 
 **Max iterations:** 3 per loop stage. If stuck — report blocker to user.
 
 ### 3. Skip rules
 
 - **design-implementer:** skip if `Layout: src/docs/layouts/<page>.md` exists (not `pending`)
-- **design-tester:** skip if `Figma: none` or no new UI components
 - **test-writer:** skip if `Tests: none` (logic-only infra tasks)
 - **qa-tester:** always run for feature tasks with Описание
+- **design-tester:** never — роль удалена
 
-### 4. Context isolation
+### 4. Context isolation and Figma quota
 
-- **Figma** → only design-implementer, design-tester
-- **frontend-developer** → spec + Layout Spec, never Figma
-- **reviewer / qa-tester** → spec + diff + tests, never Figma
+- **Live Figma MCP** → only `design-implementer`, and only when Layout is `pending`
+- Pass **one** primary page frame URL. Nested controls on that frame do not need extra node URLs
+- design-implementer: **one** `get_design_context` on that node; do not also call `get_screenshot` / `get_metadata` unless context failed
+- If user reports Figma quota exhausted → skip design-implementer Figma calls; use existing Layout Spec or ask user
+- **frontend-developer / reviewer / test-writer / qa-tester** → product spec + Layout Spec, **never Figma**, never Figma MCP
+- Fix loops: do **not** re-fetch Figma; re-read Layout Spec
 
 ### 5. Task prompt template for sub-agents
 
@@ -97,6 +96,8 @@ Launch sub-agents via **Task tool** with `subagent_type` matching the role (or r
 <what this agent must do / fix>
 ```
 
+For everyone except design-implementer: strip Figma URLs from the packet you paste. Leave Layout path.
+
 ## Completion checklist
 
 Before marking task done, verify:
@@ -106,7 +107,6 @@ Before marking task done, verify:
 - [ ] `npm test` passes (if Tests ≠ none)
 - [ ] reviewer: Pass
 - [ ] qa-tester: Pass
-- [ ] design-tester: Pass or skipped
 - [ ] Out of scope untouched
 
 ## Output to user
@@ -115,14 +115,13 @@ Before marking task done, verify:
 ## Task: <name> — Done / Blocked
 
 ### Pipeline executed
-design-implementer → frontend-developer → … (with N fix loops)
+design-implementer → frontend-developer → reviewer → test-writer → qa-tester (with N fix loops)
 
 ### Results
 - Lint: pass
 - Tests: pass (N tests)
 - Review: pass
 - QA: pass
-- Design: pass / skipped
 
 ### Files changed
 - ...

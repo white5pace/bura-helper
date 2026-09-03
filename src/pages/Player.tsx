@@ -65,6 +65,7 @@ function Player() {
 
   useEffect(() => {
     form.reset({ playerName: player?.name ?? "" });
+    form.setFocus("playerName");
   }, [form, id, player?.name]);
 
   const savePlayer = (data: FormValues) => {
@@ -109,8 +110,9 @@ function Player() {
                 {...field}
                 id="player-name"
                 aria-invalid={fieldState.invalid}
-                placeholder="Имя игрока"
+                placeholder="Введите имя игрока"
                 autoComplete="off"
+                autoFocus
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>

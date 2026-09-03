@@ -2,16 +2,24 @@ import { Button } from "@/components/ui/button";
 import { PlusIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { NumberedCheckbox } from "@/components/ui/numbered-checkbox";
 import { Field, FieldGroup, FieldLabel, FieldSet } from "@/components/ui/field";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "@/components/ui/toast";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type Player, useParticipants } from "@/contexts/ParticipantsContext";
+import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 import DeleteConfirmDialog from "@/shared/ui/DeleteConfirmDialog";
+
+const SELECTION_LIMIT = 4;
 
 interface PlayerRowProps {
   player: Player;
   checked: boolean;
+  disabled?: boolean;
   orderNumber?: number;
+  tone?: "default" | "team";
   onCheckedChange: (checked: boolean) => void;
   onDelete: () => void;
 }
@@ -19,19 +27,23 @@ interface PlayerRowProps {
 function PlayerRow({
   player,
   checked,
+  disabled,
   orderNumber,
+  tone = "default",
   onCheckedChange,
   onDelete,
 }: PlayerRowProps) {
   const navigate = useNavigate();
 
   return (
-    <Field orientation="horizontal">
+    <Field orientation="horizontal" className="gap-3">
       <NumberedCheckbox
         id={String(player.id)}
         name={String(player.id)}
         checked={checked}
+        disabled={disabled}
         orderNumber={orderNumber}
+        tone={tone}
         onCheckedChange={(value) => onCheckedChange(value === true)}
       />
       <FieldLabel htmlFor={String(player.id)} className="font-normal">
@@ -62,16 +74,19 @@ function PlayerRow({
 
 function Participants() {
   const navigate = useNavigate();
-  const { players, getPlayerById, deletePlayer } = useParticipants();
+  const {
+    players,
+    selectedPlayerIds,
+    teamMode,
+    setTeamMode,
+    setPlayerSelected,
+    getPlayerById,
+    deletePlayer,
+  } = useParticipants();
 
-  const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
 
-  const handleSelectRow = (id: string, checked: boolean) => {
-    setSelectedRows((prev) =>
-      checked ? [...prev, id] : prev.filter((rowId) => rowId !== id),
-    );
-  };
+  const selectionLimitReached = selectedPlayerIds.length >= SELECTION_LIMIT;
 
   const deleteDialogContent = useMemo(() => {
     if (!deletePlayerId) {
@@ -95,17 +110,41 @@ function Participants() {
     }
 
     deletePlayer(deletePlayerId);
-    setSelectedRows((prev) => prev.filter((rowId) => rowId !== deletePlayerId));
     setDeletePlayerId(null);
   };
 
+  const handleContinue = () => {
+    if (teamMode && selectedPlayerIds.length < SELECTION_LIMIT) {
+      toast.add({
+        type: "error",
+        title: "Выберите четырёх игроков для командного режима",
+      });
+      return;
+    }
+
+    navigate(teamMode ? "/teams" : "/game-start");
+  };
+
   return (
-    <div>
+    <PageLayout
+      footer={
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          className="w-full"
+          onClick={handleContinue}
+        >
+          Продолжить
+        </Button>
+      }
+    >
       <SecondHeader
         actions={
           <Button
-            variant="secondary"
+            variant="ghost"
             size="icon"
+            iconSize="lg"
             className="ml-auto"
             onClick={() => navigate("/participants/player")}
           >
@@ -116,34 +155,59 @@ function Participants() {
         Выберите участников
       </SecondHeader>
 
-      <FieldSet>
-        <FieldGroup className="gap-3">
-          {players.length === 0 ? (
-            <p className="text-muted-foreground">
-              Нет игроков. Нажмите +, чтобы добавить.
-            </p>
-          ) : (
-            players.map((player) => {
-              const orderIndex = selectedRows.indexOf(player.id);
+      <div className="flex flex-col gap-4">
+        <div className="flex w-full items-center">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="team-mode"
+              size="lg"
+              checked={teamMode}
+              onCheckedChange={(checked) => setTeamMode(checked)}
+            />
+            <Label htmlFor="team-mode">Командный режим</Label>
+          </div>
+          {teamMode ? (
+            <span className="ml-auto font-medium">
+              {selectedPlayerIds.length} из {SELECTION_LIMIT}
+            </span>
+          ) : null}
+        </div>
 
-              return (
-                <PlayerRow
-                  key={player.id}
-                  player={player}
-                  checked={orderIndex !== -1}
-                  orderNumber={
-                    orderIndex !== -1 ? orderIndex + 1 : undefined
-                  }
-                  onCheckedChange={(checked) =>
-                    handleSelectRow(player.id, checked)
-                  }
-                  onDelete={() => setDeletePlayerId(player.id)}
-                />
-              );
-            })
-          )}
-        </FieldGroup>
-      </FieldSet>
+        <FieldSet>
+          <FieldGroup className="gap-4">
+            {players.length === 0 ? (
+              <p className="text-muted-foreground">
+                Нет игроков. Нажмите +, чтобы добавить.
+              </p>
+            ) : (
+              players.map((player) => {
+                const orderIndex = selectedPlayerIds.indexOf(player.id);
+                const checked = orderIndex !== -1;
+                const orderNumber = checked ? orderIndex + 1 : undefined;
+                const tone =
+                  teamMode && (orderNumber === 2 || orderNumber === 4)
+                    ? "team"
+                    : "default";
+
+                return (
+                  <PlayerRow
+                    key={player.id}
+                    player={player}
+                    checked={checked}
+                    disabled={!checked && selectionLimitReached}
+                    orderNumber={orderNumber}
+                    tone={tone}
+                    onCheckedChange={(isChecked) =>
+                      setPlayerSelected(player.id, isChecked)
+                    }
+                    onDelete={() => setDeletePlayerId(player.id)}
+                  />
+                );
+              })
+            )}
+          </FieldGroup>
+        </FieldSet>
+      </div>
 
       <DeleteConfirmDialog
         open={deletePlayerId !== null}
@@ -156,7 +220,7 @@ function Participants() {
         description={deleteDialogContent.description}
         onConfirm={handleConfirmDelete}
       />
-    </div>
+    </PageLayout>
   );
 }
 

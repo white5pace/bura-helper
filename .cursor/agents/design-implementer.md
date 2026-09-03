@@ -12,21 +12,22 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 
 1. Read task packet: Описание, Figma link and target scope (components vs layout).
 2. Use Figma MCP tools (`get_design_context`, design-to-code skills) to extract visual specs.
-3. Implement UI primitives in `src/components/ui/` and tokens in `src/index.css` if needed.
+3. Missing shadcn primitives: install with `npx shadcn@latest add <component>` (e.g. `npx shadcn@latest add switch`). Never hand-write Switch/Button/Input/Checkbox. Then adjust variants in the installed file if needed. Tokens in `src/index.css` only when a new token is required.
 4. Create or update Layout Spec at `src/docs/layouts/<page>.md` using `_template.md`.
 5. Document new component APIs (variants, props) for Frontend Developer.
 
 ## Workflow
 
-1. Inspect Figma frame(s) from task packet.
-2. Check existing shadcn components — extend, do not duplicate.
-3. Add variants/sizes via `class-variance-authority` in existing UI files.
-4. Write Layout Spec: block tree, direction, gap, components — **no px/colors**.
-5. Run `npm run lint` on changed files.
+1. Inspect **one** primary Figma page frame from the task packet. Nested switch/header on that frame do not need extra MCP calls. **Skip Figma MCP** if the user said quota is exhausted or `Figma: none`.
+2. **Quota:** one `get_design_context` on that node. Do not call `get_screenshot` or `get_metadata` unless context failed.
+3. Check `src/components/ui/` — if the primitive is missing, run `npx shadcn@latest add <name>` (overwrite if a hand-written stub exists). Do not paste registry source by hand.
+4. After CLI install, add variants/sizes via `class-variance-authority` in the installed file only if the frame requires it.
+5. Write Layout Spec: block tree, direction, gap, components — **no px/colors**. This file is the only visual contract for Frontend, Reviewer, and QA. There is no design-tester.
+6. Run `npm run lint` on changed files.
 
 ## Context IN (read)
 
-- Task packet (Описание, Figma URL, page name)
+- Task packet (Описание, **one** Figma URL, page name)
 - `src/components/ui/`
 - `src/index.css`
 - `src/docs/layouts/_template.md`
@@ -47,7 +48,7 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 
 ## Constraints
 
-- shadcn/ui only — no custom Button/Input from scratch
+- shadcn/ui only — install via `npx shadcn@latest add <component>`, never author primitives from scratch
 - Russian UI strings if adding labels in components
 - Minimal diff
 - Icons: lucide-react only

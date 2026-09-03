@@ -33,7 +33,7 @@
 ## UI и компоненты
 
 - Все базовые элементы интерфейса — из **shadcn/ui** (`src/components/ui/`).
-- Новые UI-примитивы добавлять через shadcn CLI, не писать с нуля аналоги Button, Input, Checkbox и т.д.
+- Новые UI-примитивы **только** через CLI: `npx shadcn@latest add <component>` (пример: `npx shadcn@latest add switch`). Не копировать registry-исходник в файл вручную и не писать аналоги Button, Input, Checkbox, Switch с нуля. После установки допустимы только variants/sizes в уже скачанном файле.
 - Кастомные компоненты проекта — в `src/shared/ui/`; страницы — в `src/pages/`.
 - Импорты UI: `@/components/ui/...`, утилиты: `@/lib/utils`.
 - Иконки — только из `lucide-react`.

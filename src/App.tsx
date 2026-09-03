@@ -1,9 +1,12 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Toaster } from "./components/ui/toast";
 import { ParticipantsProvider } from "./contexts/ParticipantsContext";
 import MainLayout from "./layouts/MainLayout";
+import GameStart from "./pages/GameStart";
 import Home from "./pages/Home";
 import Participants from "./pages/Participants";
 import Player from "./pages/Player";
+import Teams from "./pages/Teams";
 
 const router = createBrowserRouter([
   {
@@ -13,6 +16,8 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: "/participants", element: <Participants /> },
       { path: "/participants/player/:id?", element: <Player /> },
+      { path: "/teams", element: <Teams /> },
+      { path: "/game-start", element: <GameStart /> },
     ],
   },
 ]);
@@ -20,7 +25,9 @@ const router = createBrowserRouter([
 function App() {
   return (
     <ParticipantsProvider>
-      <RouterProvider router={router} />
+      <Toaster>
+        <RouterProvider router={router} />
+      </Toaster>
     </ParticipantsProvider>
   );
 }

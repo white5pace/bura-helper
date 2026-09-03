@@ -14,11 +14,12 @@
 **Todo:** `todo.md` → §<N>, пункты: ...  
 **Route:** `/path`
 
-**Figma:** `<url>` | `none`  
-→ если есть: только для Design Implementer / Design Tester
+**Figma:** `<url одного page frame>` | `none`  
+→ live MCP только у Design Implementer; один URL страницы, не список компонентов
 
 **Layout:** `src/docs/layouts/<page>.md` | `pending`  
-→ `pending` = сначала Design Implementer, потом Frontend Developer
+→ `pending` = сначала Design Implementer, потом Frontend Developer  
+→ готовый Layout Spec — источник компоновки для FE / reviewer / qa-tester (без Figma)
 
 **Code refs:** файлы-эталоны (например `src/pages/Player.tsx`)
 
@@ -26,7 +27,7 @@
 
 **Tests:** unit | integration | none
 
-**Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester → [design-tester]
+**Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester
 
 **Task file:** скопировать в `src/docs/tasks/current.md` и запустить skill `team-orchestrator`
 
@@ -37,7 +38,7 @@
 - [ ] Описание задачи заполнено
 - [ ] Spec-страница указана
 - [ ] Пункты todo — конкретная секция, не весь файл
-- [ ] Figma или явно `none`
+- [ ] Figma: один page frame или явно `none`
 - [ ] Out of scope заполнен
 - [ ] Решено: нужен ли Design Implementer до Frontend Developer
-- [ ] Sub-agents перечислены по pipeline
+- [ ] Sub-agents перечислены по pipeline (без design-tester)

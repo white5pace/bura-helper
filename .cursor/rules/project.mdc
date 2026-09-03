@@ -13,6 +13,7 @@ alwaysApply: true
 
 - React 19 + TypeScript + Vite
 - UI только shadcn/ui (`src/components/ui/`)
+- Новые примитивы ставить CLI: `npx shadcn@latest add <component>`. Не копировать исходник руками и не писать аналоги Button/Input/Switch/Checkbox с нуля. После установки можно только добавить variant/size в уже скачанный файл.
 - Данные в localStorage
 - Глобальное состояние только React Context (`src/contexts/`)
 - Без Redux, Zustand, Jotai, MobX и других сторонних сторов

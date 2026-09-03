@@ -11,14 +11,18 @@ Sub-agents: `.cursor/agents/*.md`.
 
 ## Pipeline
 
-Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester → [Design Tester]
+Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester
 
-Циклы исправлений: reviewer / test-writer / qa-tester / design-tester → frontend-developer (или design-implementer) → повтор цепочки.
+Циклы исправлений: reviewer / test-writer / qa-tester → frontend-developer (или design-implementer) → повтор цепочки.
+
+Роли design-tester **нет**.
 
 ## Правила
 
-- Figma — только Design Implementer и Design Tester
-- Frontend Developer — spec + Layout Spec (`src/docs/layouts/`), **без Figma**
+- Live Figma MCP — только Design Implementer, один page frame, один `get_design_context`
+- Все остальные роли — product spec + Layout Spec (`src/docs/layouts/`), **без Figma**
+- QA Tester сверяет и бизнес-логику, и компоновку по Layout Spec (не пиксели из Figma)
+- Новые UI-примитивы: `npx shadcn@latest add <component>`
 - Task packet: `src/docs/task-packet.template.md` → `src/docs/tasks/current.md`
 - Запуск: «Используй skill team-orchestrator»
 

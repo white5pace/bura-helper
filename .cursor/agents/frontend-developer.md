@@ -51,11 +51,11 @@ You are the **Frontend Developer** for bura-helper.
 - React 19 + TypeScript + Vite
 - State: React Context only (no Redux/Zustand)
 - Forms: react-hook-form + zod, errors in Russian
-- UI: shadcn/ui only
+- UI: shadcn/ui only. Missing primitives: `npx shadcn@latest add <component>` — do not write Switch/Button/Input by hand.
 - Data: localStorage via Context
 - Minimal diff, no unrelated refactors
 
 ## Do not
 
-- Implement visual styling from Figma — ask Design Implementer for missing primitives
+- Open Figma or invent styling from a mock — use Layout Spec; missing primitives → Design Implementer
 - Write tests — Test Writer handles that (unless trivial inline fix)
