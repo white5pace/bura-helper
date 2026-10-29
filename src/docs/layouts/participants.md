@@ -2,7 +2,7 @@
 
 > Упрощённая компоновка для Frontend Developer.  
 > Создаёт и обновляет **Design Implementer** при работе с Figma.  
-> Не дублировать product spec (`src/docs/pages/participants.md`).
+> Не дублировать product spec (`src/docs/spec.md` → «Выбор игроков»).
 
 ## Структура (дерево блоков)
 
@@ -58,7 +58,7 @@ MainLayout (shell)
   - невыбранные: `disabled`, когда выбран лимит (4)
 - `@/components/ui/field` — `Field`, `FieldGroup`, `FieldLabel`, `FieldSet`
 - `@/components/ui/toast` — overlay над footer; `type="error"`, иконка `OctagonX` уже в примитиве
-- `@/shared/ui/DeleteConfirmDialog` — подтверждение удаления (overlay, не в дереве страницы)
+- `@/shared/ui/DeleteConfirmDialog` — подтверждение удаления (overlay, не в дереве страницы). Текст предупреждает, что вместе с игроком удаляются все команды, в которых он состоит
 
 ## Не включать
 

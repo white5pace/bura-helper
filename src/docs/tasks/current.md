@@ -1,4 +1,4 @@
-# Task: <название>
+# Task: Страница «Команды»
 
 > Активная задача для оркестратора. Skill: `team-orchestrator`.  
 > Шаблон: `src/docs/task-packet.template.md`
@@ -6,23 +6,25 @@
 ---
 
 **Type:** feature
-**Описание:** switch, «Продолжить», toast, цвета чекбоксов, сохранение выбора.Скорее всего надо обновить ещё спеки не написано о том что все остальные Кроме выбранных чекбоксы должны быть disabled Когда уже выбрано четыре участника.
-`https://www.figma.com/design/O7StaUcSvZTVQ3rzjmvwVe/Bura-helper?node-id=423-3566&t=otV6xntqPY0ykU9Z-4` Возможно switch можно вынести в отдельный компонент И на твоё усмотрение может быть имеет смысл вынести и заголовок страницы тоже в отдельном компонент `https://www.figma.com/design/O7StaUcSvZTVQ3rzjmvwVe/Bura-helper?node-id=439-5751&t=otV6xntqPY0ykU9Z-4`
 
-**Spec:** `src/docs/pages/participants.md`  
-**Todo:** `todo.md` → 2. Выбор игроков (`participants.md`) P1
-**Route:** `/participnats`
+**Описание:** реализовать страницу именования команд поверх существующей заготовки `Teams.tsx`. Показать два поля для чёрной и красной команд с именами соответствующих игроков в подписях. Состав определить по порядку выбора: чёрные — игроки №1 и №3, красные — №2 и №4. Предзаполнить названия в формате `Имя1 + Имя2` и сразу сохранить значения по умолчанию в `localStorage`. Форму реализовать на `react-hook-form` + `zod`; каждое название должно содержать минимум 3 символа. Ошибки и invalid-состояния должны соответствовать макету. По кнопке «Продолжить» сохранить введённые названия для следующих экранов и перейти на `/game-start`. Если необходимые выбранные игроки отсутствуют, не показывать некорректную форму и безопасно вернуть пользователя на `/participants`.
 
-**Figma:** `https://www.figma.com/design/O7StaUcSvZTVQ3rzjmvwVe/Bura-helper?node-id=459-2656&t=otV6xntqPY0ykU9Z-4`
+**Spec:** `src/docs/spec.md` → «Названия команд»  
+**Todo:** нет (P1 экрана в spec)  
+**Route:** `/teams`
+
+**Figma:** `https://www.figma.com/design/yDMDsQFFgfIk4fIlAKVJEE/Bura-helper?node-id=459-2750&t=5QuByxDrPXhjKbQ9-4`  
 **Layout:** `pending`  
-**Code refs:** …
+**Code refs:** `src/pages/Teams.tsx`, `src/pages/Player.tsx`, `src/pages/Participants.tsx`, `src/contexts/ParticipantsContext.tsx`, `src/shared/ui/PageLayout.tsx`, `src/shared/ui/SecondHeader.tsx`, `src/App.tsx`
 
-**Out of scope:** …
+**Out of scope:** реализация страниц `/game-start` и `/game`; `GameContext`, игровой процесс и подсчёт очков; изменение логики выбора и состава игроков на `/participants`; генерация или подсказки названий команд из P4/«Фантазия».
 
-**Tests:** unit | integration | none
+**Tests:** integration
+
+**Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester
 
 **Status:** pending
 
 ---
 
-_Заполните поля выше и запустите: «Используй skill team-orchestrator»_
+_Запустите: «Используй skill team-orchestrator»_

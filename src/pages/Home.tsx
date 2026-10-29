@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useParticipants } from "@/contexts/ParticipantsContext";
 
 function Home() {
   const navigate = useNavigate();
+  const { resetGame } = useParticipants();
 
   return (
     <div>
@@ -11,6 +13,7 @@ function Home() {
         size="lg"
         className="w-full mb-4"
         onClick={() => {
+          resetGame();
           navigate({ pathname: "/participants" });
         }}
       >

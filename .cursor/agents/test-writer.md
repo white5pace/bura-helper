@@ -35,7 +35,7 @@ You are the **Test Writer** for bura-helper.
 
 - Task packet (Описание, tests scope)
 - Changed files from Frontend Developer
-- `src/docs/pages/<page>.md`
+- `src/docs/spec.md`
 - `src/test/setup.ts`
 - `src/docs/tech.md` (testing section)
 

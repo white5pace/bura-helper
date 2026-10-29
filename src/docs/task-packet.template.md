@@ -10,8 +10,9 @@
 
 **Описание:** что нужно сделать в рамках этой задачи (свободный текст)
 
-**Spec:** `src/docs/pages/<page>.md`  
-**Todo:** `todo.md` → §<N>, пункты: ...  
+**Spec:** `src/docs/spec.md` → «<экран>»  
+**Todo:** `src/docs/todo.md` — только P1 вне спеки; продуктовые пункты не дублировать  
+
 **Route:** `/path`
 
 **Figma:** `<url одного page frame>` | `none`  
@@ -37,7 +38,7 @@
 
 - [ ] Описание задачи заполнено
 - [ ] Spec-страница указана
-- [ ] Пункты todo — конкретная секция, не весь файл
+- [ ] Если есть P1 вне спеки — указаны строки в `src/docs/todo.md`, иначе явно «нет»
 - [ ] Figma: один page frame или явно `none`
 - [ ] Out of scope заполнен
 - [ ] Решено: нужен ли Design Implementer до Frontend Developer

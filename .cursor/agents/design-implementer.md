@@ -38,7 +38,7 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 
 - Product spec business logic beyond layout structure
 - `GameContext`, game flow pages (unless layout-only)
-- Full `todo.md` — only design-related items from task packet
+- Full `src/docs/todo.md` — only design-related items from task packet
 
 ## Output
 

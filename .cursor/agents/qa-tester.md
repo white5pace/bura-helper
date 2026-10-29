@@ -11,7 +11,7 @@ You are the **QA Tester** for bura-helper — business logic, spec, and Layout S
 ## When invoked
 
 1. Read task packet: Описание, spec path, layout path, route.
-2. Read product spec (`src/docs/pages/<page>.md`) — expected behavior.
+2. Read product spec (`src/docs/spec.md`, нужный экран) — expected behavior.
 3. Read Layout Spec (`src/docs/layouts/<page>.md`) — block tree, variants, composition.
 4. Trace code paths for the implemented feature (pages, context, forms).
 5. Report gaps — do not fix code.
@@ -27,7 +27,7 @@ You are the **QA Tester** for bura-helper — business logic, spec, and Layout S
 ## Context IN (read)
 
 - Task packet (Описание, spec, layout, route, out of scope) — ignore Figma URLs if present
-- `src/docs/pages/<page>.md`
+- `src/docs/spec.md`
 - `src/docs/layouts/<page>.md`
 - Changed files from Frontend Developer
 - Test files from Test Writer

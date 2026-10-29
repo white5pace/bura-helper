@@ -127,7 +127,7 @@ design-implementer → frontend-developer → reviewer → test-writer → qa-te
 - ...
 
 ### Next step
-Update todo.md, clear or archive current.md
+Update `src/docs/spec.md` (галочки P1) и при необходимости `src/docs/todo.md`; clear or archive current.md
 ```
 
 ## Related docs

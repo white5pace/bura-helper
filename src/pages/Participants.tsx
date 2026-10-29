@@ -8,11 +8,10 @@ import { toast } from "@/components/ui/toast";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type Player, useParticipants } from "@/contexts/ParticipantsContext";
+import { TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 import DeleteConfirmDialog from "@/shared/ui/DeleteConfirmDialog";
-
-const SELECTION_LIMIT = 4;
 
 interface PlayerRowProps {
   player: Player;
@@ -82,11 +81,13 @@ function Participants() {
     setPlayerSelected,
     getPlayerById,
     deletePlayer,
+    commitTeamSelection,
   } = useParticipants();
 
   const [deletePlayerId, setDeletePlayerId] = useState<string | null>(null);
 
-  const selectionLimitReached = selectedPlayerIds.length >= SELECTION_LIMIT;
+  const selectionLimitReached =
+    selectedPlayerIds.length >= TEAM_MODE_PLAYER_COUNT;
 
   const deleteDialogContent = useMemo(() => {
     if (!deletePlayerId) {
@@ -100,7 +101,7 @@ function Participants() {
 
     return {
       title: "Удалить игрока?",
-      description: `Вы уверены, что хотите удалить игрока «${player.name}»?`,
+      description: `Вы уверены, что хотите удалить игрока «${player.name}»? Вместе с ним будут удалены все команды, в которых он состоит.`,
     };
   }, [deletePlayerId, getPlayerById]);
 
@@ -114,7 +115,7 @@ function Participants() {
   };
 
   const handleContinue = () => {
-    if (teamMode && selectedPlayerIds.length < SELECTION_LIMIT) {
+    if (teamMode && selectedPlayerIds.length < TEAM_MODE_PLAYER_COUNT) {
       toast.add({
         type: "error",
         title: "Выберите четырёх игроков для командного режима",
@@ -122,7 +123,15 @@ function Participants() {
       return;
     }
 
-    navigate(teamMode ? "/teams" : "/game-start");
+    if (teamMode) {
+      if (!commitTeamSelection()) {
+        return;
+      }
+      navigate("/teams");
+      return;
+    }
+
+    navigate("/game-start");
   };
 
   return (
@@ -168,7 +177,7 @@ function Participants() {
           </div>
           {teamMode ? (
             <span className="ml-auto font-medium">
-              {selectedPlayerIds.length} из {SELECTION_LIMIT}
+              {selectedPlayerIds.length} из {TEAM_MODE_PLAYER_COUNT}
             </span>
           ) : null}
         </div>

@@ -2,7 +2,7 @@
 
 > Упрощённая компоновка для Frontend Developer, Reviewer и QA Tester.  
 > Создаёт и обновляет **только Design Implementer** (единственная роль с Figma MCP).  
-> Не дублировать product spec (`src/docs/pages/<page>.md`).
+> Не дублировать product spec (`src/docs/spec.md` → «<экран>»).
 
 ## Структура (дерево блоков)
 

@@ -21,7 +21,7 @@ You are the **Reviewer** for bura-helper — spec and architecture compliance.
 **Spec / задача**
 
 - [ ] Описание из task packet выполнено
-- [ ] Соответствует `src/docs/pages/<page>.md` и todo
+- [ ] Соответствует `src/docs/spec.md` (нужный экран) и `src/docs/todo.md`, если в задаче есть P1 вне спеки
 - [ ] Out of scope items not touched
 - [ ] Russian UI strings and error messages
 
@@ -43,7 +43,7 @@ You are the **Reviewer** for bura-helper — spec and architecture compliance.
 ## Context IN (read)
 
 - Task packet (Описание, spec, layout, todo, out of scope) — ignore Figma URLs
-- `src/docs/pages/<page>.md`
+- `src/docs/spec.md`
 - `src/docs/layouts/<page>.md` (if exists)
 - `src/docs/tech.md`
 - `.cursor/rules/project.mdc`

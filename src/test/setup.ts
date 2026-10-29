@@ -22,10 +22,11 @@ const localStorageMock = (() => {
 beforeEach(() => {
   localStorageMock.clear();
   vi.stubGlobal("localStorage", localStorageMock);
+  let uuidCounter = 0;
   vi.stubGlobal(
     "crypto",
     {
-      randomUUID: () => "test-uuid",
+      randomUUID: () => `test-uuid-${++uuidCounter}`,
     } as Crypto,
   );
 });
