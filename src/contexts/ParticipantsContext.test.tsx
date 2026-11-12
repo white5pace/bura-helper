@@ -42,6 +42,8 @@ function seedPlayers(
       selectedPlayerIds,
       teamMode,
       currentTeamIds,
+      trump: null,
+      dealerId: null,
     } satisfies CurrentGame),
   );
 }
@@ -333,6 +335,8 @@ describe("ParticipantsContext", () => {
       selectedPlayerIds: [],
       teamMode: false,
       currentTeamIds: { black: null, red: null },
+      trump: null,
+      dealerId: null,
     });
     expect(JSON.parse(localStorage.getItem("teams")!)).toEqual(
       catalogBeforeReset,

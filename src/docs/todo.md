@@ -7,3 +7,4 @@
 - [ ] Маршруты `/game`, `/round-end`, `/game-end`
 - [ ] Исправить `npm run build` (TS5101: deprecated `baseUrl` в tsconfig)
 - [ ] Вынести роуты тестов в отдельный компонент и сделать общую функцию `renderWithRouter` (сейчас дублируется в `Participants.test.tsx`)
+- [ ] Привести компоненты к нативному виду в дизайне, затем в самом приложении

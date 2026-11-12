@@ -35,6 +35,8 @@ function seedParticipants({
       selectedPlayerIds,
       teamMode,
       currentTeamIds: { black: null, red: null },
+      trump: null,
+      dealerId: null,
     } satisfies CurrentGame),
   );
 }
@@ -176,7 +178,7 @@ describe("Participants page", () => {
     await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Подготовка к игре" }),
+      await screen.findByRole("heading", { name: "Подготовка" }),
     ).toBeInTheDocument();
   });
 

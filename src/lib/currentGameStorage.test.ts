@@ -51,6 +51,8 @@ describe("currentGameStorage", () => {
       selectedPlayerIds: ["missing", "p2", "p1", "p3", "p4", "p5", "p6"],
       teamMode: true,
       currentTeamIds: { black: "t1", red: "gone" },
+      trump: "пики" as const,
+      dealerId: "missing",
     };
 
     expect(
@@ -62,6 +64,8 @@ describe("currentGameStorage", () => {
       selectedPlayerIds: ["p2", "p1", "p3", "p4"],
       teamMode: true,
       currentTeamIds: { black: "t1", red: null },
+      trump: "пики",
+      dealerId: null,
     });
   });
 });

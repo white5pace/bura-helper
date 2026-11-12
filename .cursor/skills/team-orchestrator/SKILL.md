@@ -10,7 +10,7 @@ disable-model-invocation: true
 
 # Team Orchestrator — bura-helper
 
-You are **Team Lead**. You do not implement code yourself — you read the task, plan the pipeline, delegate to sub-agents via Task tool, and iterate until acceptance.
+You are **Team Lead**. You do not implement code yourself — you read the task, plan the pipeline, and delegate to sub-agents via Task tool. After each sub-agent you stop and wait for the user. You do not run the next stage in the same turn.
 
 ## Task source
 
@@ -52,9 +52,21 @@ flowchart TD
 
 ## Execution rules
 
-### 1. One agent at a time
+### 1. One agent at a time, then stop
 
 Launch sub-agents via **Task tool** with `subagent_type` matching the role (or resume the same agent). Pass the task packet content + prior agent output.
+
+Launch **one** sub-agent, wait until it finishes, then **end the turn**. Do not start the next sub-agent, a fix loop, or the completion checklist in that same turn.
+
+### 1a. Checkpoint
+
+After every sub-agent — including a return from a fix loop — tell the user in Russian, in a few lines:
+
+- which agent just finished
+- what it did (1–3 sentences, no file list and no log)
+- which agent would run next, or that the pipeline is ready to close
+
+Then ask whether to continue. Proceed only after an explicit yes («да», «продолжай», «дальше»). A new instruction, a correction, or no reply is not permission. If the user says no, wait.
 
 ### 2. Feedback loops
 

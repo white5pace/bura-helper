@@ -36,6 +36,8 @@ function seedTeams({
       selectedPlayerIds,
       teamMode: true,
       currentTeamIds,
+      trump: null,
+      dealerId: null,
     } satisfies CurrentGame),
   );
 }
@@ -135,7 +137,7 @@ describe("Teams page", () => {
       "true",
     );
     expect(
-      screen.queryByRole("heading", { name: "Подготовка к игре" }),
+      screen.queryByRole("heading", { name: "Подготовка" }),
     ).not.toBeInTheDocument();
   });
 
@@ -158,7 +160,7 @@ describe("Teams page", () => {
     await user.click(screen.getByRole("button", { name: "Продолжить" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Подготовка к игре" }),
+      await screen.findByRole("heading", { name: "Подготовка" }),
     ).toBeInTheDocument();
     await waitFor(() => {
       const teams = readTeams();

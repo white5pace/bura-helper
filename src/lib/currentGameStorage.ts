@@ -1,10 +1,18 @@
 import { z } from "zod";
 import { TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
 
+export const TRUMP_SUITS = ["крести", "пики", "черви", "буби"] as const;
+
+export type TrumpSuit = (typeof TRUMP_SUITS)[number];
+
 const currentTeamIdsSchema = z.object({
   black: z.union([z.string(), z.null()]),
   red: z.union([z.string(), z.null()]),
 });
+
+const trumpSchema = z.enum(TRUMP_SUITS).nullable().catch(null);
+
+const dealerIdSchema = z.union([z.string(), z.null()]).catch(null);
 
 const currentGameSchema = z.object({
   selectedPlayerIds: z
@@ -15,6 +23,8 @@ const currentGameSchema = z.object({
     ),
   teamMode: z.unknown().transform((value) => value === true),
   currentTeamIds: currentTeamIdsSchema.catch({ black: null, red: null }),
+  trump: trumpSchema,
+  dealerId: dealerIdSchema,
 });
 
 export type CurrentTeamIds = z.infer<typeof currentTeamIdsSchema>;
@@ -27,6 +37,8 @@ export function defaultCurrentGame(): CurrentGame {
     selectedPlayerIds: [],
     teamMode: false,
     currentTeamIds: { black: null, red: null },
+    trump: null,
+    dealerId: null,
   };
 }
 
@@ -72,6 +84,8 @@ export function sanitizeCurrentGame(
       black: keepTeamIdIfExists(game.currentTeamIds.black, catalogs.teamIds),
       red: keepTeamIdIfExists(game.currentTeamIds.red, catalogs.teamIds),
     },
+    trump: game.trump,
+    dealerId: keepTeamIdIfExists(game.dealerId, catalogs.playerIds),
   };
 }
 
