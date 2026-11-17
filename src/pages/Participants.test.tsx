@@ -34,9 +34,11 @@ function seedParticipants({
     JSON.stringify({
       selectedPlayerIds,
       teamMode,
+      gameStarted: false,
       currentTeamIds: { black: null, red: null },
       trump: null,
       dealerId: null,
+      scores: {},
     } satisfies CurrentGame),
   );
 }

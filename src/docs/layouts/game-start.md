@@ -14,10 +14,10 @@ MainLayout (shell)
    │  └─ Content (vertical, gap-4, flex-1)
    │     ├─ DealerBlock (vertical, gap-3)
    │     │  ├─ DealerLabel (horizontal, items-center, gap-2)
-   │     │  │  ├─ img src/assets/dealer.svg
+   │     │  │  ├─ img src/assets/icons/dealer.svg
    │     │  │  └─ текст «Раздает:»
    │     │  └─ имя раздающего
-   │     │     — если раздающего нет, блок раздающего, форму и футер не рендерить; вместо них `RedirectNotice`.
+   │     │     — если раздающего нет или в командном режиме не заданы обе команды, страницу не рендерить: тихий переход на `/participants` (`replace`), без сброса сессии.
    │     └─ Form
    │        └─ Field (vertical, gap-3)
    │           ├─ FieldLabel: «Козырь»
@@ -61,11 +61,11 @@ MainLayout (shell)
   - `value` по порядку: `крести`, `пики`, `черви`, `буби`
 - `@/components/ui/button` — footer: `variant="outline"`, `size="lg"`, `className="w-full"`; submit связан с формой через `form`
 - SVG (исключение: не lucide, файлы не переписывать, корневые `width`/`height` не менять):
-  - `src/assets/dealer.svg` — знак рядом с «Раздает:». Обёртка `shrink-0 object-contain` того же размера, что `RadioGroupItem`. Не растягивать на всю строку
-  - `src/assets/suit-clubs.svg` — крести, `alt="крести"`
-  - `src/assets/suit-spades.svg` — пики, `alt="пики"`
-  - `src/assets/suit-hearts.svg` — черви, `alt="черви"`
-  - `src/assets/suit-diamonds.svg` — буби, `alt="буби"`
+  - `src/assets/icons/dealer.svg` (`dealer`) — знак рядом с «Раздает:». Обёртка `shrink-0 object-contain` того же размера, что `RadioGroupItem`. Не растягивать на всю строку
+  - `src/assets/icons/suit-clubs.svg` (`clubs`) — крести, `alt="крести"`
+  - `src/assets/icons/suit-spades.svg` (`spades`) — пики, `alt="пики"`
+  - `src/assets/icons/suit-hearts.svg` (`hearts`) — черви, `alt="черви"`
+  - `src/assets/icons/suit-diamonds.svg` (`diamonds`) — буби, `alt="буби"`
   - масти: `shrink-0`, собственный размер файла, сразу после своей радиокнопки
 
 ## Не включать

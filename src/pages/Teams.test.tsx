@@ -27,6 +27,7 @@ function seedTeams({
   selectedPlayerIds = PLAYERS.map(({ id }) => id),
   teams = DEFAULT_CATALOG_TEAMS,
   currentTeamIds = { black: "t-black" as string | null, red: "t-red" as string | null },
+  teamMode = true,
 } = {}) {
   localStorage.setItem("players", JSON.stringify(PLAYERS));
   localStorage.setItem("teams", JSON.stringify(teams));
@@ -34,10 +35,12 @@ function seedTeams({
     CURRENT_GAME_STORAGE_KEY,
     JSON.stringify({
       selectedPlayerIds,
-      teamMode: true,
+      teamMode,
+      gameStarted: false,
       currentTeamIds,
       trump: null,
       dealerId: null,
+      scores: {},
     } satisfies CurrentGame),
   );
 }
@@ -221,13 +224,43 @@ describe("Teams page", () => {
   });
 
   it("перенаправляет на выбор участников, если игроков недостаточно", async () => {
-    seedTeams({ selectedPlayerIds: ["p1", "p2", "p3"] });
+    seedTeams({
+      selectedPlayerIds: ["p1", "p2", "p3"],
+      currentTeamIds: { black: null, red: null },
+    });
     renderTeams();
 
     expect(
       await screen.findByRole("heading", { name: "Выберите участников" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /Имя команды/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("перенаправляет на выбор участников без командного режима", async () => {
+    seedTeams({
+      teamMode: false,
+      currentTeamIds: { black: null, red: null },
+    });
+    renderTeams();
+
+    expect(
+      await screen.findByRole("heading", { name: "Выберите участников" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: /Имя команды/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("перенаправляет на выбор участников, если команды не заданы", async () => {
+    seedTeams({ currentTeamIds: { black: null, red: null } });
+    renderTeams();
+
+    expect(
+      await screen.findByRole("heading", { name: "Выберите участников" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("textbox", { name: /Имя команды/ }),
     ).not.toBeInTheDocument();

@@ -77,6 +77,7 @@ function Participants() {
     players,
     selectedPlayerIds,
     teamMode,
+    hasCommittedSession,
     setTeamMode,
     setPlayerSelected,
     getPlayerById,
@@ -99,11 +100,22 @@ function Participants() {
       return { title: "", description: "" };
     }
 
+    const description = [
+      `Вы уверены, что хотите удалить игрока «${player.name}»? Вместе с ним будут удалены все команды, в которых он состоит.`,
+    ];
+    if (selectedPlayerIds.includes(deletePlayerId)) {
+      description.push(
+        hasCommittedSession
+          ? "Вы удаляете выбранного игрока — текущая игра будет сброшена."
+          : "Вы удаляете выбранного игрока — он будет убран из текущего выбора.",
+      );
+    }
+
     return {
       title: "Удалить игрока?",
-      description: `Вы уверены, что хотите удалить игрока «${player.name}»? Вместе с ним будут удалены все команды, в которых он состоит.`,
+      description: description.join("\n"),
     };
-  }, [deletePlayerId, getPlayerById]);
+  }, [deletePlayerId, getPlayerById, hasCommittedSession, selectedPlayerIds]);
 
   const handleConfirmDelete = () => {
     if (!deletePlayerId) {

@@ -37,6 +37,7 @@ function Teams() {
     getPlayerById,
     getTeamById,
     currentTeamIds,
+    teamMode,
     setTeamName,
   } = useParticipants();
   const selectedPlayers = selectedPlayerIds.map(getPlayerById);
@@ -50,6 +51,7 @@ function Teams() {
     ? getTeamById(currentTeamIds.red)
     : undefined;
   const hasCurrentTeams = blackTeam !== undefined && redTeam !== undefined;
+  const shouldLeave = !teamMode || !hasRequiredPlayers || !hasCurrentTeams;
   const blackTeamName = blackTeam?.name ?? "";
   const redTeamName = redTeam?.name ?? "";
 
@@ -70,10 +72,10 @@ function Teams() {
   const { reset, control, handleSubmit } = form;
 
   useEffect(() => {
-    if (!hasRequiredPlayers) {
+    if (shouldLeave) {
       navigate("/participants", { replace: true });
     }
-  }, [hasRequiredPlayers, navigate]);
+  }, [shouldLeave, navigate]);
 
   useEffect(() => {
     if (blackTeamName || redTeamName) {
@@ -93,7 +95,7 @@ function Teams() {
     navigate("/game-start");
   };
 
-  if (!hasRequiredPlayers || !hasCurrentTeams) {
+  if (shouldLeave) {
     return null;
   }
 

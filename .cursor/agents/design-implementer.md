@@ -53,6 +53,22 @@ You are the **Design Implementer** for bura-helper — a React + shadcn/ui card 
 - Minimal diff
 - Icons: lucide-react only
 
+## Questions to the user
+
+You cannot see the chat. A question inside a summary is dropped. Do not call AskQuestion.
+
+If the task packet and the Figma frame are not enough to continue, stop. Do not guess.
+
+Return only this block, then end:
+
+```markdown
+## Нужно уточнение
+
+- ...
+```
+
+No other output after the block.
+
 ## Skills to load
 
 - figma-design-to-code (before `get_design_context`)

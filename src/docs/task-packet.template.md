@@ -30,6 +30,8 @@
 
 **Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester
 
+`qa-regression` сюда не входит: его просят отдельно проверить влияние изменения за пределами задачи.
+
 **Task file:** скопировать в `src/docs/tasks/current.md` и запустить skill `team-orchestrator`
 
 ---

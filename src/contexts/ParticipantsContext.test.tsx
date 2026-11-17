@@ -7,6 +7,7 @@ import {
 } from "@/contexts/ParticipantsContext";
 import {
   CURRENT_GAME_STORAGE_KEY,
+  CurrentGameValidationError,
   type CurrentGame,
 } from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
@@ -41,9 +42,11 @@ function seedPlayers(
     JSON.stringify({
       selectedPlayerIds,
       teamMode,
+      gameStarted: false,
       currentTeamIds,
       trump: null,
       dealerId: null,
+      scores: {},
     } satisfies CurrentGame),
   );
 }
@@ -334,19 +337,32 @@ describe("ParticipantsContext", () => {
     expect(readCurrentGame()).toEqual({
       selectedPlayerIds: [],
       teamMode: false,
+      gameStarted: false,
       currentTeamIds: { black: null, red: null },
       trump: null,
       dealerId: null,
+      scores: {},
     });
     expect(JSON.parse(localStorage.getItem("teams")!)).toEqual(
       catalogBeforeReset,
     );
   });
 
-  it("drops unknown and extra selected ids when loading", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["missing", "p2", "p1", "p3", "p4", "p5"]);
-    const { result } = renderHook(() => useParticipants(), { wrapper });
+  it("throws CurrentGameValidationError for unknown or extra selected ids", () => {
+    seedPlayers(DEFAULT_PLAYERS, ["missing", "p2"]);
+    expect(() => {
+      renderHook(() => useParticipants(), { wrapper });
+    }).toThrow(
+      new CurrentGameValidationError(
+        "Сессия ссылается на несуществующего игрока",
+      ),
+    );
 
-    expect(result.current.selectedPlayerIds).toEqual(["p2", "p1", "p3", "p4"]);
+    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4", "p5"]);
+    expect(() => {
+      renderHook(() => useParticipants(), { wrapper });
+    }).toThrow(
+      new CurrentGameValidationError("В партии не больше четырёх игроков"),
+    );
   });
 });
