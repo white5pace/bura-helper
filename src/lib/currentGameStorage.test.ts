@@ -4,9 +4,14 @@ import {
   CurrentGameValidationError,
   defaultCurrentGame,
   loadCurrentGame,
+  parseCurrentGame,
+  saveCurrentGame,
   validateCurrentGameCatalogs,
   type CurrentGame,
 } from "@/lib/currentGameStorage";
+
+const TYPE_MISMATCH_MESSAGE =
+  "Данные текущей игры не соответствуют ожидаемому типу";
 
 function store(value: unknown) {
   localStorage.setItem(CURRENT_GAME_STORAGE_KEY, JSON.stringify(value));
@@ -25,10 +30,44 @@ function validGame(overrides: Partial<CurrentGame> = {}): CurrentGame {
   };
 }
 
-function expectStoredGameError(message: string) {
+function catchStoredGameError(): CurrentGameValidationError {
   let caught: unknown;
   try {
     loadCurrentGame();
+  } catch (error) {
+    caught = error;
+  }
+
+  expect(caught).toBeInstanceOf(CurrentGameValidationError);
+  return caught as CurrentGameValidationError;
+}
+
+function expectStoredGameError(message: string) {
+  expect(catchStoredGameError().message).toBe(message);
+}
+
+function expectStoredGameMessages(messages: readonly string[]) {
+  expect(catchStoredGameError().message.split("; ").sort()).toEqual(
+    [...messages].sort(),
+  );
+}
+
+function expectParseError(value: unknown, message: string) {
+  let caught: unknown;
+  try {
+    parseCurrentGame(value);
+  } catch (error) {
+    caught = error;
+  }
+
+  expect(caught).toBeInstanceOf(CurrentGameValidationError);
+  expect((caught as CurrentGameValidationError).message).toBe(message);
+}
+
+function expectCatalogError(check: () => void, message: string) {
+  let caught: unknown;
+  try {
+    check();
   } catch (error) {
     caught = error;
   }
@@ -49,18 +88,34 @@ describe("currentGameStorage", () => {
     expect(loadCurrentGame()).toEqual(game);
   });
 
+  it("saves and loads a valid started team game", () => {
+    const game = validGame({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      gameStarted: true,
+      currentTeamIds: { black: "t1", red: "t2" },
+      trump: "черви",
+      dealerId: "p3",
+      scores: { p1: 6, p2: 2, p3: 4, p4: 0 },
+    });
+
+    saveCurrentGame(game);
+
+    expect(loadCurrentGame()).toEqual(game);
+  });
+
   it("throws CurrentGameValidationError for broken JSON and non-object roots", () => {
     localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "{");
     expectStoredGameError("Не удалось прочитать текущую игру");
 
     localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "null");
-    expectStoredGameError("Данные текущей игры должны быть объектом");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "[]");
-    expectStoredGameError("Данные текущей игры должны быть объектом");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "42");
-    expectStoredGameError("Данные текущей игры должны быть объектом");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
   });
 
   it("throws CurrentGameValidationError for invalid fields", () => {
@@ -68,33 +123,57 @@ describe("currentGameStorage", () => {
       ...validGame(),
       selectedPlayerIds: ["p1", 2, "p2"],
     });
-    expectStoredGameError("Id игрока должен быть строкой");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     store({
       ...validGame(),
       teamMode: "yes",
     });
-    expectStoredGameError("Командный режим должен быть логическим значением");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     store({
       ...validGame(),
       gameStarted: "yes",
     });
-    expectStoredGameError(
-      "Признак начала игры должен быть логическим значением",
-    );
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     store({
       ...validGame(),
       gameStarted: undefined,
     });
-    expectStoredGameError("Не задан признак начала игры");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
 
     store({
       ...validGame(),
       trump: "бубны",
     });
-    expectStoredGameError("Неизвестная масть козыря");
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
+
+    store({
+      ...validGame(),
+      teamMode: "yes",
+      gameStarted: "yes",
+      trump: "бубны",
+    });
+    expectStoredGameError(TYPE_MISMATCH_MESSAGE);
+
+    expectParseError(
+      validGame({
+        gameStarted: true,
+        trump: "пики",
+        dealerId: "p1",
+        scores: { p1: Number.POSITIVE_INFINITY },
+      }),
+      TYPE_MISMATCH_MESSAGE,
+    );
+
+    expectParseError(
+      {
+        ...validGame(),
+        scores: { p1: "два" },
+      },
+      TYPE_MISMATCH_MESSAGE,
+    );
   });
 
   it("throws CurrentGameValidationError for more than 4 players or broken invariants", () => {
@@ -202,15 +281,40 @@ describe("currentGameStorage", () => {
         dealerId: "p1",
       }),
     );
-    expectStoredGameError(
-      "Начатая игра без игроков; Раздающий не входит в список игроков",
-    );
+    expectStoredGameMessages([
+      "Начатая игра без игроков",
+      "Раздающий не входит в список игроков",
+    ]);
 
     store(
       validGame({
         gameStarted: true,
         teamMode: true,
         selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+        trump: "пики",
+        dealerId: "p1",
+      }),
+    );
+    expectStoredGameError("Неполный состав командной игры");
+
+    store(
+      validGame({
+        gameStarted: true,
+        teamMode: true,
+        selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+        currentTeamIds: { black: "t1", red: null },
+        trump: "пики",
+        dealerId: "p1",
+      }),
+    );
+    expectStoredGameError("Неполный состав командной игры");
+
+    store(
+      validGame({
+        gameStarted: true,
+        teamMode: true,
+        selectedPlayerIds: ["p1", "p2"],
+        currentTeamIds: { black: "t1", red: "t2" },
         trump: "пики",
         dealerId: "p1",
       }),
@@ -232,33 +336,29 @@ describe("currentGameStorage", () => {
   });
 
   it("throws CurrentGameValidationError for unknown player or team ids", () => {
-    expect(() =>
-      validateCurrentGameCatalogs(validGame(), {
-        playerIds: new Set(["p1"]),
-        teamIds: new Set(),
-      }),
-    ).toThrow(
-      new CurrentGameValidationError(
-        "Сессия ссылается на несуществующего игрока",
-      ),
+    expectCatalogError(
+      () =>
+        validateCurrentGameCatalogs(validGame(), {
+          playerIds: new Set(["p1"]),
+          teamIds: new Set(),
+        }),
+      "Сессия ссылается на несуществующего игрока",
     );
 
-    expect(() =>
-      validateCurrentGameCatalogs(
-        validGame({
-          teamMode: true,
-          selectedPlayerIds: ["p1", "p2", "p3", "p4"],
-          currentTeamIds: { black: "t1", red: "gone" },
-        }),
-        {
-          playerIds: new Set(["p1", "p2", "p3", "p4"]),
-          teamIds: new Set(["t1"]),
-        },
-      ),
-    ).toThrow(
-      new CurrentGameValidationError(
-        "Сессия ссылается на несуществующую команду",
-      ),
+    expectCatalogError(
+      () =>
+        validateCurrentGameCatalogs(
+          validGame({
+            teamMode: true,
+            selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+            currentTeamIds: { black: "t1", red: "gone" },
+          }),
+          {
+            playerIds: new Set(["p1", "p2", "p3", "p4"]),
+            teamIds: new Set(["t1"]),
+          },
+        ),
+      "Сессия ссылается на несуществующую команду",
     );
   });
 });

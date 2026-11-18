@@ -77,7 +77,9 @@ After every sub-agent that did **not** ask for clarification — including a ret
 
 Then ask whether to continue. Proceed only after an explicit yes («да», «продолжай», «дальше»). A new instruction, a correction, or no reply is not permission. If the user says no, wait.
 
-If **`reviewer`** just finished and further code changes are needed (either after `Fail` or for follow-up suggestions/refactoring), and the user has not explicitly asked for or declined a commit, ask whether to create a `git commit` before launching the next coding sub-agent (so the next `reviewer` pass sees only the incremental diff).
+If **`reviewer`** just finished and further code changes are needed (either after `Fail` or for follow-up suggestions/refactoring), and the user has not explicitly asked for or declined a commit, ask whether to create a `git commit` before launching the next coding sub-agent (so the next `reviewer` pass sees only the incremental diff). Sub-agents themselves must never run `git commit` or suggest committing.
+
+Only `test-writer` writes new tests or rewrites passing test logic; other sub-agents only fix tests broken by their own changes and otherwise report test-improvement suggestions to the orchestrator.
 
 ### 2. Feedback loops
 

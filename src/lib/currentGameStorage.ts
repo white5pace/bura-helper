@@ -14,95 +14,26 @@ export class CurrentGameValidationError extends Error {
   }
 }
 
-const currentTeamIdsSchema = z.object(
-  {
-    black: z
-      .string({
-        invalid_type_error: "Id команды должен быть строкой",
-      })
-      .nullable(),
-    red: z
-      .string({
-        invalid_type_error: "Id команды должен быть строкой",
-      })
-      .nullable(),
-  },
-  {
-    required_error: "Не заданы команды",
-    invalid_type_error: "Команды заданы неверно",
-  },
-);
+const TYPE_MISMATCH_MESSAGE =
+  "Данные текущей игры не соответствуют ожидаемому типу";
+
+const currentTeamIdsSchema = z.object({
+  black: z.string().nullable(),
+  red: z.string().nullable(),
+});
 
 const currentGameSchema = z
-  .object(
-    {
-      selectedPlayerIds: z
-        .array(
-          z.string({
-            invalid_type_error: "Id игрока должен быть строкой",
-          }),
-          {
-            required_error: "Не задан список игроков",
-            invalid_type_error: "Список игроков должен быть массивом",
-          },
-        )
-        .max(TEAM_MODE_PLAYER_COUNT, "В партии не больше четырёх игроков"),
-      teamMode: z.boolean({
-        required_error: "Не задан командный режим",
-        invalid_type_error: "Командный режим должен быть логическим значением",
-      }),
-      gameStarted: z.boolean({
-        required_error: "Не задан признак начала игры",
-        invalid_type_error:
-          "Признак начала игры должен быть логическим значением",
-      }),
-      currentTeamIds: currentTeamIdsSchema,
-      trump: z
-        .enum(TRUMP_SUITS, {
-          errorMap: (issue) => {
-            if (
-              issue.code === z.ZodIssueCode.invalid_type &&
-              issue.received === "undefined"
-            ) {
-              return { message: "Не задан козырь" };
-            }
-            return { message: "Неизвестная масть козыря" };
-          },
-        })
-        .nullable(),
-      dealerId: z
-        .string({
-          required_error: "Не задан раздающий",
-          invalid_type_error: "Id раздающего должен быть строкой",
-        })
-        .nullable(),
-      scores: z.record(
-        z.string({
-          invalid_type_error: "Id игрока в счёте должен быть строкой",
-        }),
-        z
-          .number({
-            invalid_type_error: "Счёт должен быть числом",
-          })
-          .finite("Счёт должен быть конечным числом"),
-        {
-          required_error: "Не задан счёт",
-          invalid_type_error: "Счёт должен быть объектом",
-        },
-      ),
-    },
-    {
-      errorMap: (issue, ctx) => {
-        if (
-          issue.code === z.ZodIssueCode.invalid_type &&
-          issue.path.length === 0
-        ) {
-          return { message: "Данные текущей игры должны быть объектом" };
-        }
-        return { message: ctx.defaultError };
-      },
-    },
-  )
+  .object({
+    selectedPlayerIds: z
+      .array(z.string())
+      .max(TEAM_MODE_PLAYER_COUNT, "В партии не больше четырёх игроков"),
+    teamMode: z.boolean(),
+    gameStarted: z.boolean(),
+    currentTeamIds: currentTeamIdsSchema,
+    trump: z.enum(TRUMP_SUITS).nullable(),
+    dealerId: z.string().nullable(),
+    scores: z.record(z.string(), z.number().finite()),
+  })
   .superRefine((game, ctx) => {
     const selectedSet = new Set(game.selectedPlayerIds);
     if (selectedSet.size !== game.selectedPlayerIds.length) {
@@ -113,21 +44,18 @@ const currentGameSchema = z
       });
     }
 
+    const teamsAssigned =
+      game.currentTeamIds.black !== null || game.currentTeamIds.red !== null;
+
     if (!game.teamMode) {
-      if (
-        game.currentTeamIds.black !== null ||
-        game.currentTeamIds.red !== null
-      ) {
+      if (teamsAssigned) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: "Вне командного режима команды не задаются",
           path: ["currentTeamIds"],
         });
       }
-    } else if (
-      game.currentTeamIds.black !== null ||
-      game.currentTeamIds.red !== null
-    ) {
+    } else if (!game.gameStarted && teamsAssigned) {
       if (
         game.currentTeamIds.black === null ||
         game.currentTeamIds.red === null
@@ -238,11 +166,23 @@ export function defaultCurrentGame(): CurrentGame {
   };
 }
 
+function currentGameIssueMessage(issue: z.ZodIssue): string {
+  if (
+    issue.code === z.ZodIssueCode.custom ||
+    issue.code === z.ZodIssueCode.too_big
+  ) {
+    return issue.message;
+  }
+  return TYPE_MISMATCH_MESSAGE;
+}
+
 export function parseCurrentGame(value: unknown): CurrentGame {
   const result = currentGameSchema.safeParse(value);
   if (!result.success) {
     throw new CurrentGameValidationError(
-      result.error.issues.map((issue) => issue.message).join("; "),
+      Array.from(
+        new Set(result.error.issues.map(currentGameIssueMessage)),
+      ).join("; "),
       { cause: result.error },
     );
   }

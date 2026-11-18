@@ -6,7 +6,9 @@ import { Toaster } from "@/components/ui/toast";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
 import {
   CURRENT_GAME_STORAGE_KEY,
+  defaultCurrentGame,
   type CurrentGame,
+  type TrumpSuit,
 } from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
 import GameStart from "@/pages/GameStart";
@@ -26,6 +28,11 @@ function seedParticipants({
   selectedPlayerIds = [] as string[],
   teamMode = false,
   teams = [] as Team[],
+  currentTeamIds = { black: null, red: null } as CurrentGame["currentTeamIds"],
+  gameStarted = false,
+  trump = null as TrumpSuit | null,
+  dealerId = null as string | null,
+  scores = {} as Record<string, number>,
 } = {}) {
   localStorage.setItem("players", JSON.stringify(players));
   localStorage.setItem("teams", JSON.stringify(teams));
@@ -34,11 +41,11 @@ function seedParticipants({
     JSON.stringify({
       selectedPlayerIds,
       teamMode,
-      gameStarted: false,
-      currentTeamIds: { black: null, red: null },
-      trump: null,
-      dealerId: null,
-      scores: {},
+      gameStarted,
+      currentTeamIds,
+      trump,
+      dealerId,
+      scores,
     } satisfies CurrentGame),
   );
 }
@@ -299,6 +306,89 @@ describe("Participants page", () => {
 
     await waitFor(() => {
       expect(readCurrentGame().currentTeamIds.red).toBe("t1");
+    });
+  });
+
+  it("удаление невыбранного игрока открывает диалог без предупреждения о выборе и удаляет только его", async () => {
+    seedParticipants({ selectedPlayerIds: ["p1", "p2"] });
+    const user = userEvent.setup();
+    renderParticipants();
+
+    await user.click(screen.getByRole("button", { name: "Удалить Дима" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Удалить игрока?" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Вы уверены, что хотите удалить игрока «Дима»\?/),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/Вы удаляете выбранного игрока/),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Дима")).not.toBeInTheDocument();
+      expect(readCurrentGame().selectedPlayerIds).toEqual(["p1", "p2"]);
+    });
+  });
+
+  it("удаление выбранного игрока без активной игры показывает предупреждение и убирает его из выбора", async () => {
+    seedParticipants({ selectedPlayerIds: ["p1", "p2", "p3"] });
+    const user = userEvent.setup();
+    renderParticipants();
+
+    await user.click(screen.getByRole("button", { name: "Удалить Боб" }));
+
+    expect(
+      await screen.findByText(
+        /Вы удаляете выбранного игрока — он будет убран из текущего выбора\./,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Боб")).not.toBeInTheDocument();
+      expect(readCurrentGame().selectedPlayerIds).toEqual(["p1", "p3"]);
+    });
+  });
+
+  it("удаление выбранного игрока при активной сессии предупреждает о сбросе игры и сбрасывает currentGame", async () => {
+    seedParticipants({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      teams: [
+        { id: "t1", name: "Чёрные", playerIds: ["p1", "p3"] },
+        { id: "t2", name: "Красные", playerIds: ["p2", "p4"] },
+      ],
+      currentTeamIds: { black: "t1", red: "t2" },
+      gameStarted: true,
+      trump: "пики",
+      dealerId: "p1",
+      scores: { p1: 4, p2: 2 },
+    });
+    const user = userEvent.setup();
+    renderParticipants();
+
+    await user.click(screen.getByRole("button", { name: "Удалить Алиса" }));
+
+    expect(
+      await screen.findByText(
+        /Вы удаляете выбранного игрока — текущая игра будет сброшена\./,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Алиса")).not.toBeInTheDocument();
+      expect(readCurrentGame()).toEqual(defaultCurrentGame());
+      const storedPlayers = JSON.parse(
+        localStorage.getItem("players") ?? "[]",
+      ) as typeof FIVE_PLAYERS;
+      expect(storedPlayers.map((p) => p.id)).toEqual(["p2", "p3", "p4", "p5"]);
     });
   });
 });

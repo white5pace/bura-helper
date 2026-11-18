@@ -8,6 +8,7 @@ import {
 import {
   CURRENT_GAME_STORAGE_KEY,
   CurrentGameValidationError,
+  defaultCurrentGame,
   type CurrentGame,
 } from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
@@ -34,6 +35,7 @@ function seedPlayers(
   teamMode = false,
   teams: Team[] = [],
   currentTeamIds: CurrentGame["currentTeamIds"] = { black: null, red: null },
+  extra: Partial<Pick<CurrentGame, "gameStarted" | "trump" | "dealerId" | "scores">> = {},
 ) {
   localStorage.setItem("players", JSON.stringify(players));
   localStorage.setItem("teams", JSON.stringify(teams));
@@ -47,6 +49,7 @@ function seedPlayers(
       trump: null,
       dealerId: null,
       scores: {},
+      ...extra,
     } satisfies CurrentGame),
   );
 }
@@ -348,21 +351,227 @@ describe("ParticipantsContext", () => {
     );
   });
 
+  it("startGame sets gameStarted, trump, dealerId in context and localStorage without clearing scores", () => {
+    seedPlayers(
+      DEFAULT_PLAYERS,
+      ["p1", "p2"],
+      false,
+      [],
+      { black: null, red: null },
+      {
+        gameStarted: true,
+        trump: "буби",
+        dealerId: "p1",
+        scores: { p1: 5, p2: 3 },
+      },
+    );
+    const { result } = renderHook(() => useParticipants(), { wrapper });
+
+    act(() => {
+      result.current.startGame({ trump: "пики", dealerId: "p2" });
+    });
+
+    expect(result.current.gameStarted).toBe(true);
+    expect(result.current.trump).toBe("пики");
+    expect(result.current.dealerId).toBe("p2");
+    expect(result.current.scores).toEqual({ p1: 5, p2: 3 });
+
+    expect(readCurrentGame()).toEqual({
+      selectedPlayerIds: ["p1", "p2"],
+      teamMode: false,
+      gameStarted: true,
+      currentTeamIds: { black: null, red: null },
+      trump: "пики",
+      dealerId: "p2",
+      scores: { p1: 5, p2: 3 },
+    });
+  });
+
+  it("resets currentGame on deleting a selected player when hasCommittedSession is true, but preserves session when deleting an unselected player", () => {
+    seedPlayers(
+      DEFAULT_PLAYERS,
+      ["p1", "p2", "p3", "p4"],
+      true,
+      [
+        { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
+        { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
+      ],
+      { black: "t1", red: "t2" },
+      {
+        gameStarted: true,
+        trump: "черви",
+        dealerId: "p1",
+        scores: { p1: 4, p2: 2 },
+      },
+    );
+    const { result } = renderHook(() => useParticipants(), { wrapper });
+
+    expect(result.current.hasCommittedSession).toBe(true);
+
+    act(() => {
+      result.current.deletePlayer("p5");
+    });
+
+    expect(result.current.hasCommittedSession).toBe(true);
+    expect(result.current.gameStarted).toBe(true);
+    expect(result.current.selectedPlayerIds).toEqual(["p1", "p2", "p3", "p4"]);
+    expect(result.current.currentTeamIds).toEqual({ black: "t1", red: "t2" });
+    expect(result.current.scores).toEqual({ p1: 4, p2: 2 });
+
+    act(() => {
+      result.current.deletePlayer("p2");
+    });
+
+    expect(result.current.hasCommittedSession).toBe(false);
+    expect(readCurrentGame()).toEqual(defaultCurrentGame());
+    expect(result.current.players.map((p) => p.id)).toEqual(["p1", "p3", "p4"]);
+  });
+
+  it("only removes player from selectedPlayerIds on deletePlayer when hasCommittedSession is false", () => {
+    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3"]);
+    const { result } = renderHook(() => useParticipants(), { wrapper });
+
+    expect(result.current.hasCommittedSession).toBe(false);
+
+    act(() => {
+      result.current.deletePlayer("p2");
+    });
+
+    expect(result.current.selectedPlayerIds).toEqual(["p1", "p3"]);
+    expect(readCurrentGame().selectedPlayerIds).toEqual(["p1", "p3"]);
+  });
+
+  it("clears started round and teams when setPlayerSelected or setTeamMode changes", () => {
+    const teams: Team[] = [
+      { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
+      { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
+    ];
+    seedPlayers(
+      DEFAULT_PLAYERS,
+      ["p1", "p2", "p3", "p4"],
+      true,
+      teams,
+      { black: "t1", red: "t2" },
+      {
+        gameStarted: true,
+        trump: "крести",
+        dealerId: "p1",
+        scores: { p1: 6, p2: 2 },
+      },
+    );
+    const { result, unmount } = renderHook(() => useParticipants(), { wrapper });
+
+    act(() => {
+      result.current.setPlayerSelected("p4", false);
+    });
+
+    expect(result.current.selectedPlayerIds).toEqual(["p1", "p2", "p3"]);
+    expect(result.current.gameStarted).toBe(false);
+    expect(result.current.trump).toBeNull();
+    expect(result.current.dealerId).toBeNull();
+    expect(result.current.scores).toEqual({});
+    expect(result.current.currentTeamIds).toEqual({ black: null, red: null });
+    unmount();
+
+    seedPlayers(
+      DEFAULT_PLAYERS,
+      ["p1", "p2", "p3", "p4"],
+      true,
+      teams,
+      { black: "t1", red: "t2" },
+      {
+        gameStarted: true,
+        trump: "буби",
+        dealerId: "p2",
+        scores: { p1: 1, p2: 7 },
+      },
+    );
+    const secondHook = renderHook(() => useParticipants(), { wrapper });
+
+    act(() => {
+      secondHook.result.current.setTeamMode(false);
+    });
+
+    expect(secondHook.result.current.teamMode).toBe(false);
+    expect(secondHook.result.current.gameStarted).toBe(false);
+    expect(secondHook.result.current.trump).toBeNull();
+    expect(secondHook.result.current.dealerId).toBeNull();
+    expect(secondHook.result.current.scores).toEqual({});
+    expect(secondHook.result.current.currentTeamIds).toEqual({
+      black: null,
+      red: null,
+    });
+  });
+
+  it("resetGame clears a started game with trump, dealerId, and scores", () => {
+    seedPlayers(
+      DEFAULT_PLAYERS,
+      ["p1", "p2"],
+      false,
+      [],
+      { black: null, red: null },
+      {
+        gameStarted: true,
+        trump: "пики",
+        dealerId: "p2",
+        scores: { p1: 8, p2: 4 },
+      },
+    );
+    const { result } = renderHook(() => useParticipants(), { wrapper });
+
+    act(() => {
+      result.current.resetGame();
+    });
+
+    expect(result.current.gameStarted).toBe(false);
+    expect(result.current.trump).toBeNull();
+    expect(result.current.dealerId).toBeNull();
+    expect(result.current.scores).toEqual({});
+    expect(result.current.selectedPlayerIds).toEqual([]);
+    expect(readCurrentGame()).toEqual(defaultCurrentGame());
+  });
+
   it("throws CurrentGameValidationError for unknown or extra selected ids", () => {
     seedPlayers(DEFAULT_PLAYERS, ["missing", "p2"]);
-    expect(() => {
-      renderHook(() => useParticipants(), { wrapper });
-    }).toThrow(
-      new CurrentGameValidationError(
-        "Сессия ссылается на несуществующего игрока",
-      ),
-    );
+    expectParticipantsError("Сессия ссылается на несуществующего игрока");
 
     seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4", "p5"]);
-    expect(() => {
-      renderHook(() => useParticipants(), { wrapper });
-    }).toThrow(
-      new CurrentGameValidationError("В партии не больше четырёх игроков"),
+    expectParticipantsError("В партии не больше четырёх игроков");
+  });
+
+  it("throws CurrentGameValidationError when the stored game has the wrong type", () => {
+    seedPlayers(DEFAULT_PLAYERS, ["p1"]);
+    localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "null");
+    expectParticipantsError(
+      "Данные текущей игры не соответствуют ожидаемому типу",
+    );
+
+    localStorage.setItem(
+      CURRENT_GAME_STORAGE_KEY,
+      JSON.stringify({
+        selectedPlayerIds: ["p1"],
+        teamMode: "yes",
+        gameStarted: false,
+        currentTeamIds: { black: null, red: null },
+        trump: null,
+        dealerId: null,
+        scores: {},
+      }),
+    );
+    expectParticipantsError(
+      "Данные текущей игры не соответствуют ожидаемому типу",
     );
   });
 });
+
+function expectParticipantsError(message: string) {
+  let caught: unknown;
+  try {
+    renderHook(() => useParticipants(), { wrapper });
+  } catch (error) {
+    caught = error;
+  }
+
+  expect(caught).toBeInstanceOf(CurrentGameValidationError);
+  expect((caught as CurrentGameValidationError).message).toBe(message);
+}

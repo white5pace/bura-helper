@@ -16,10 +16,10 @@ const corners: readonly {
   className: string;
   align: PlayerCardAlign;
 }[] = [
-  { className: "absolute right-0 bottom-0 ", align: "end" },
+  { className: "absolute right-0 bottom-0", align: "end" },
   { className: "absolute left-0 bottom-0", align: "start" },
   { className: "absolute top-0 left-0 rotate-180", align: "end" },
-  { className: "absolute top-0 right-0  rotate-180", align: "start" },
+  { className: "absolute top-0 right-0 rotate-180", align: "start" },
 ];
 
 function seatIndex(playerIndex: number, playerCount: number) {

@@ -75,4 +75,5 @@ No other output after the block.
 ## Do not
 
 - Open Figma or invent styling from a mock — use Layout Spec; missing primitives → Design Implementer
-- Write tests — Test Writer handles that (unless trivial inline fix)
+- Write new tests or create new test files — Test Writer handles that (only fix existing tests broken by your own changes; if passing tests need rewriting/improvement, report it to the orchestrator instead of editing them)
+- Run `git commit` or suggest committing — git commits are managed only by the orchestrator/user after review

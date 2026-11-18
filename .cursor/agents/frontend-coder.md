@@ -73,6 +73,8 @@ Ask only what blocks the work. No other output after the block.
 - Invent product scope beyond the given task
 - Open Figma unless the user asked and provided a file/node
 - Rewrite docs, agent files, or orchestration rules
+- Create new test files or write new test suites (`test-writer` handles that) — only fix existing tests broken by your own changes unless the prompt explicitly asks to write new tests. If existing passing tests could be improved or rewritten, do not rewrite them yourself — mention it in your summary for the orchestrator to delegate to `test-writer`
+- Run `git commit` or suggest committing — git commits are managed only by the orchestrator/user after review
 
 ## Output
 
