@@ -1,16 +1,15 @@
-import { render, screen } from "@testing-library/react";
-import { createMemoryRouter, RouterProvider } from "react-router-dom";
+import { screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
 import RequireNotStarted from "@/layouts/RequireNotStarted";
-import { seedStorage } from "@/test/storage";
+import { renderWithRouter } from "@/test/router";
+import { seedStorage, TEST_PLAYERS } from "@/test/storage";
 
 const PREP_ROUTES = ["/participants", "/teams", "/game-start"] as const;
 
 function seedStartedGame() {
   seedStorage({
-    players: [{ id: "p1", name: "Алиса" }],
-    selectedPlayerIds: ["p1"],
+    players: TEST_PLAYERS.slice(0, 2),
+    selectedPlayerIds: ["p1", "p2"],
     gameStarted: true,
     trump: "пики",
     dealerId: "p1",
@@ -25,7 +24,7 @@ function renderGuard(path: string) {
     return <h1>Подготовка</h1>;
   }
 
-  const router = createMemoryRouter(
+  const { router } = renderWithRouter(
     [
       {
         element: <RequireNotStarted />,
@@ -37,12 +36,6 @@ function renderGuard(path: string) {
       { path: "/game", element: <h1>Игра</h1> },
     ],
     { initialEntries: [path] },
-  );
-
-  render(
-    <ParticipantsProvider>
-      <RouterProvider router={router} />
-    </ParticipantsProvider>,
   );
 
   return {
@@ -73,7 +66,7 @@ describe("RequireNotStarted", () => {
   it.each(PREP_ROUTES)(
     "renders the child page at %s when the game has not started",
     (path) => {
-      seedStorage({ players: [{ id: "p1", name: "Алиса" }] });
+      seedStorage({ players: TEST_PLAYERS.slice(0, 1) });
       const { router, childMounted } = renderGuard(path);
 
       expect(

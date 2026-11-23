@@ -5,26 +5,18 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
 import { defaultCurrentGame } from "@/lib/currentGameStorage";
-import type { Team } from "@/lib/teamPair";
 import GameStart from "@/pages/GameStart";
 import {
   readCurrentGame,
   readPlayers,
   readTeams,
   seedStorage,
+  TEST_PLAYERS,
+  TEST_TEAMS,
 } from "@/test/storage";
 import SessionErrorBoundary from "@/widgets/session-error-boundary/SessionErrorBoundary";
 
-const PLAYERS = [
-  { id: "p1", name: "Алиса" },
-  { id: "p2", name: "Боб" },
-  { id: "p3", name: "Вася" },
-  { id: "p4", name: "Галя" },
-];
-
-const TEAMS: Team[] = [
-  { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
-];
+const players = TEST_PLAYERS.slice(0, 4);
 
 const SESSION_ERROR_TEXT =
   "Не удалось загрузить текущую игру: данные сессии повреждены или участники были изменены.";
@@ -54,8 +46,8 @@ function Crash(): ReactNode {
 describe("SessionErrorBoundary", () => {
   it("recovers the session on CurrentGameValidationError and keeps players and teams", async () => {
     seedStorage({
-      players: PLAYERS,
-      teams: TEAMS,
+      players,
+      teams: TEST_TEAMS,
       selectedPlayerIds: ["missing"],
     });
     const user = userEvent.setup();
@@ -80,8 +72,8 @@ describe("SessionErrorBoundary", () => {
     expect(
       screen.getByRole("button", { name: "Начать новую игру" }),
     ).toBeInTheDocument();
-    expect(readPlayers()).toEqual(PLAYERS);
-    expect(readTeams()).toEqual(TEAMS);
+    expect(readPlayers()).toEqual(players);
+    expect(readTeams()).toEqual(TEST_TEAMS);
 
     await user.click(screen.getByRole("button", { name: "Начать новую игру" }));
 
@@ -89,14 +81,14 @@ describe("SessionErrorBoundary", () => {
       await screen.findByRole("heading", { name: "Выберите участников" }),
     ).toBeInTheDocument();
     expect(readCurrentGame()).toEqual(defaultCurrentGame());
-    expect(readPlayers()).toEqual(PLAYERS);
-    expect(readTeams()).toEqual(TEAMS);
+    expect(readPlayers()).toEqual(players);
+    expect(readTeams()).toEqual(TEST_TEAMS);
   });
 
   it("calls the provided onReset callback when starting a new game", async () => {
     seedStorage({
-      players: PLAYERS,
-      teams: TEAMS,
+      players,
+      teams: TEST_TEAMS,
       selectedPlayerIds: ["missing"],
     });
     const onReset = vi.fn();

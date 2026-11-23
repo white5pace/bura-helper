@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useParticipants } from "@/contexts/ParticipantsContext";
+import { TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 
@@ -41,26 +42,22 @@ function Teams() {
     setTeamName,
   } = useParticipants();
   const selectedPlayers = selectedPlayerIds.map(getPlayerById);
-  const hasRequiredPlayers =
-    selectedPlayers.length === 4 &&
-    selectedPlayers.every((player) => player !== undefined);
+  const shouldLeave =
+    !teamMode ||
+    selectedPlayerIds.length !== TEAM_MODE_PLAYER_COUNT ||
+    !currentTeamIds.black ||
+    !currentTeamIds.red;
   const blackTeam = currentTeamIds.black
     ? getTeamById(currentTeamIds.black)
     : undefined;
   const redTeam = currentTeamIds.red
     ? getTeamById(currentTeamIds.red)
     : undefined;
-  const hasCurrentTeams = blackTeam !== undefined && redTeam !== undefined;
-  const shouldLeave = !teamMode || !hasRequiredPlayers || !hasCurrentTeams;
   const blackTeamName = blackTeam?.name ?? "";
   const redTeamName = redTeam?.name ?? "";
 
-  const blackPlayers = hasRequiredPlayers
-    ? [selectedPlayers[0], selectedPlayers[2]]
-    : [];
-  const redPlayers = hasRequiredPlayers
-    ? [selectedPlayers[1], selectedPlayers[3]]
-    : [];
+  const blackPlayers = [selectedPlayers[0], selectedPlayers[2]];
+  const redPlayers = [selectedPlayers[1], selectedPlayers[3]];
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),

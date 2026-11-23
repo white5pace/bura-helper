@@ -264,9 +264,22 @@ describe("currentGameStorage", () => {
       }),
     );
     expectValidationMessages(loadCurrentGame, [
-      "Начатая игра без игроков",
+      "В начатой игре должно быть минимум два игрока",
       "Раздающий не входит в список игроков",
     ]);
+
+    store(
+      validGame({
+        gameStarted: true,
+        selectedPlayerIds: ["p1"],
+        trump: "пики",
+        dealerId: "p1",
+      }),
+    );
+    expectValidationError(
+      loadCurrentGame,
+      "В начатой игре должно быть минимум два игрока",
+    );
 
     store(
       validGame({

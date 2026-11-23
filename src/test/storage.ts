@@ -7,6 +7,19 @@ import { PLAYERS_STORAGE_KEY, type Player } from "@/lib/playerStorage";
 import type { Team } from "@/lib/teamPair";
 import { TEAMS_STORAGE_KEY } from "@/lib/teamStorage";
 
+export const TEST_PLAYERS: Player[] = [
+  { id: "p1", name: "Алиса" },
+  { id: "p2", name: "Боб" },
+  { id: "p3", name: "Вася" },
+  { id: "p4", name: "Галя" },
+  { id: "p5", name: "Дима" },
+];
+
+export const TEST_TEAMS: Team[] = [
+  { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
+  { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
+];
+
 export type SeedStorageOptions = {
   players?: Player[];
   teams?: Team[];

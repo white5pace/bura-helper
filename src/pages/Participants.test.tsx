@@ -1,41 +1,43 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { Outlet } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { Toaster } from "@/components/ui/toast";
-import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
 import { defaultCurrentGame } from "@/lib/currentGameStorage";
 import RequireNotStarted from "@/layouts/RequireNotStarted";
 import GameStart from "@/pages/GameStart";
 import Participants from "@/pages/Participants";
 import Teams from "@/pages/Teams";
-import { readCurrentGame, readTeams, seedStorage } from "@/test/storage";
+import { renderWithRouter } from "@/test/router";
+import { readCurrentGame, readTeams, seedStorage, TEST_PLAYERS, TEST_TEAMS } from "@/test/storage";
 
-const FIVE_PLAYERS = [
-  { id: "p1", name: "Алиса" },
-  { id: "p2", name: "Боб" },
-  { id: "p3", name: "Вася" },
-  { id: "p4", name: "Галя" },
-  { id: "p5", name: "Дима" },
+const tooFewSelections: { label: string; selectedPlayerIds: string[] }[] = [
+  { label: "no players", selectedPlayerIds: [] },
+  { label: "one player", selectedPlayerIds: ["p1"] },
 ];
 
-// todo: extract routes into a shared component and a renderWithRouter helper
 function renderParticipants() {
-  return render(
-    <ParticipantsProvider>
-      <Toaster>
-        <MemoryRouter initialEntries={["/participants"]}>
-          <Routes>
-            <Route element={<RequireNotStarted />}>
-              <Route path="/participants" element={<Participants />} />
-              <Route path="/teams" element={<Teams />} />
-              <Route path="/game-start" element={<GameStart />} />
-            </Route>
-            <Route path="/game" element={<h1>Игра</h1>} />
-          </Routes>
-        </MemoryRouter>
-      </Toaster>
-    </ParticipantsProvider>,
+  return renderWithRouter(
+    [
+      {
+        element: (
+          <Toaster>
+            <Outlet />
+          </Toaster>
+        ),
+        children: [
+          {
+            element: <RequireNotStarted />,
+            children: [
+              { path: "/participants", element: <Participants /> },
+              { path: "/teams", element: <Teams /> },
+              { path: "/game-start", element: <GameStart /> },
+            ],
+          },
+        ],
+      },
+    ],
+    { initialEntries: ["/participants"] },
   );
 }
 
@@ -45,7 +47,7 @@ function checkboxFor(name: string) {
 
 describe("Participants page", () => {
   it("hides the selection counter until team mode is enabled", async () => {
-    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
+    seedStorage({ players: TEST_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -64,7 +66,7 @@ describe("Participants page", () => {
 
   it("hides the selection counter when team mode is turned off", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1"],
       teamMode: true,
     });
@@ -79,7 +81,7 @@ describe("Participants page", () => {
   });
 
   it("updates the counter when players are selected in team mode", async () => {
-    seedStorage({ players: FIVE_PLAYERS, teamMode: true });
+    seedStorage({ players: TEST_PLAYERS, teamMode: true });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -95,7 +97,7 @@ describe("Participants page", () => {
 
   it("shows a toast and stays on the page when continuing in team mode without 4 players", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2"],
       teamMode: true,
     });
@@ -117,7 +119,7 @@ describe("Participants page", () => {
 
   it("navigates to /teams when continuing in team mode with 4 players", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
     });
@@ -153,7 +155,7 @@ describe("Participants page", () => {
   });
 
   it("navigates to /game-start when continuing without team mode", async () => {
-    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1"] });
+    seedStorage({ players: TEST_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -164,9 +166,34 @@ describe("Participants page", () => {
     ).toBeInTheDocument();
   });
 
+  it.each(tooFewSelections)(
+    "shows a toast and stays on the page when continuing without team mode with $label",
+    async ({ selectedPlayerIds }) => {
+      seedStorage({
+        players: TEST_PLAYERS,
+        selectedPlayerIds,
+        teamMode: false,
+      });
+      const user = userEvent.setup();
+      renderParticipants();
+
+      await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+      expect(
+        await screen.findByText("Выберите минимум двух игроков"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("heading", { name: "Выберите участников" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("heading", { name: "Подготовка" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
   it("disables unselected checkboxes at the limit and allows unchecking selected ones", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
     });
     const user = userEvent.setup();
@@ -192,7 +219,7 @@ describe("Participants page", () => {
 
   it("applies team tone to even order numbers (2 and 4) in team mode", () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
     });
@@ -210,7 +237,7 @@ describe("Participants page", () => {
 
   it("keeps default checkbox tone when team mode is off", () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
     });
     renderParticipants();
@@ -221,52 +248,11 @@ describe("Participants page", () => {
     }
   });
 
-  it("fills the saved black team name when the pair is selected in reverse order", async () => {
-    seedStorage({
-      players: FIVE_PLAYERS,
-      teamMode: true,
-      teams: [
-        { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
-        { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
-      ],
-    });
-    const user = userEvent.setup();
-    renderParticipants();
-
-    // Vasya before Alisa: black is still p3+p1, but the click order is reversed.
-    await user.click(checkboxFor("Вася"));
-    await user.click(checkboxFor("Боб"));
-    await user.click(checkboxFor("Алиса"));
-    await user.click(checkboxFor("Галя"));
-    await user.click(screen.getByRole("button", { name: "Продолжить" }));
-
-    expect(
-      await screen.findByRole("textbox", {
-        name: "Имя команды чёрных (Вася, Алиса)",
-      }),
-    ).toHaveValue("Старая гвардия");
-    expect(
-      screen.getByRole("textbox", {
-        name: "Имя команды красных (Боб, Галя)",
-      }),
-    ).toHaveValue("Новички");
-
-    await waitFor(() => {
-      const storedTeams = readTeams();
-      expect(
-        storedTeams.filter(
-          (team) => team.playerIds[0] === "p1" && team.playerIds[1] === "p3",
-        ),
-      ).toHaveLength(1);
-      expect(readCurrentGame().currentTeamIds.black).toBe("t1");
-    });
-  });
-
   it("reuses the saved team when that pair is seated as red", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       teamMode: true,
-      teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
+      teams: [TEST_TEAMS[0]],
     });
     const user = userEvent.setup();
     renderParticipants();
@@ -290,7 +276,7 @@ describe("Participants page", () => {
   });
 
   it("opens a dialog without a selection warning when deleting an unselected player and removes only that player", async () => {
-    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
+    seedStorage({ players: TEST_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -316,7 +302,7 @@ describe("Participants page", () => {
 
   it("warns and removes a selected player from the selection when the session is not committed", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3"],
     });
     const user = userEvent.setup();
@@ -340,13 +326,10 @@ describe("Participants page", () => {
 
   it("warns that the current game will be reset and resets currentGame when deleting a selected player from a committed session", async () => {
     seedStorage({
-      players: FIVE_PLAYERS,
+      players: TEST_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
-      teams: [
-        { id: "t1", name: "Чёрные", playerIds: ["p1", "p3"] },
-        { id: "t2", name: "Красные", playerIds: ["p2", "p4"] },
-      ],
+      teams: TEST_TEAMS,
       currentTeamIds: { black: "t1", red: "t2" },
       gameStarted: false,
     });
@@ -366,38 +349,6 @@ describe("Participants page", () => {
     await waitFor(() => {
       expect(screen.queryByText("Боб")).not.toBeInTheDocument();
       expect(readCurrentGame()).toEqual(defaultCurrentGame());
-    });
-  });
-
-  it("redirects to the game when it has already started and does not reset the session", async () => {
-    seedStorage({
-      players: FIVE_PLAYERS,
-      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
-      teamMode: true,
-      teams: [
-        { id: "t1", name: "Чёрные", playerIds: ["p1", "p3"] },
-        { id: "t2", name: "Красные", playerIds: ["p2", "p4"] },
-      ],
-      currentTeamIds: { black: "t1", red: "t2" },
-      gameStarted: true,
-      trump: "пики",
-      dealerId: "p1",
-      scores: { p1: 4, p2: 2 },
-    });
-    renderParticipants();
-
-    expect(await screen.findByRole("heading", { name: "Игра" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("heading", { name: "Выберите участников" }),
-    ).not.toBeInTheDocument();
-    expect(readCurrentGame()).toEqual({
-      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
-      teamMode: true,
-      gameStarted: true,
-      currentTeamIds: { black: "t1", red: "t2" },
-      trump: "пики",
-      dealerId: "p1",
-      scores: { p1: 4, p2: 2 },
     });
   });
 });

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  MIN_PLAYER_COUNT,
   TEAM_MODE_PLAYER_COUNT,
   TRUMP_SUITS,
   type TrumpSuit,
@@ -76,10 +77,10 @@ const currentGameSchema = z
     }
 
     if (game.gameStarted) {
-      if (game.selectedPlayerIds.length === 0) {
+      if (game.selectedPlayerIds.length < MIN_PLAYER_COUNT) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Начатая игра без игроков",
+          message: "В начатой игре должно быть минимум два игрока",
           path: ["selectedPlayerIds"],
         });
       }

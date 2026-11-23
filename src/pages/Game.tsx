@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlertDialog,
@@ -24,24 +24,17 @@ function Game() {
     trump,
     dealerId,
     scores,
-    gameStarted,
     getPlayerById,
     getTeamById,
   } = useParticipants();
   const [confirmOpen, setConfirmOpen] = useState(false);
-
-  useEffect(() => {
-    if (!gameStarted || !trump) {
-      navigate("/", { replace: true });
-    }
-  }, [gameStarted, trump, navigate]);
 
   const confirmRoundEnd = () => {
     setConfirmOpen(false);
     navigate("/round-end");
   };
 
-  if (!gameStarted || !trump) {
+  if (!trump) {
     return null;
   }
 

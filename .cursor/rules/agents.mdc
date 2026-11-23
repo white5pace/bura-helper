@@ -11,7 +11,7 @@ Sub-agents: `.cursor/agents/*.md`.
 
 ## Pipeline
 
-Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester
+Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester → [Business Analyst]
 
 `qa-regression` в эту цепочку не входит. Его вызывают отдельно, когда нужно проверить, что изменение не сломало чужие экраны.
 

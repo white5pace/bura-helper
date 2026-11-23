@@ -11,43 +11,30 @@ import {
   TYPE_MISMATCH_MESSAGE,
   defaultCurrentGame,
 } from "@/lib/currentGameStorage";
-import type { Team } from "@/lib/teamPair";
 import {
   readCurrentGame,
   readTeams,
   seedStorage,
+  TEST_PLAYERS,
+  TEST_TEAMS,
   type SeedStorageOptions,
 } from "@/test/storage";
-
-const DEFAULT_PLAYERS = [
-  { id: "p1", name: "Алиса" },
-  { id: "p2", name: "Боб" },
-  { id: "p3", name: "Вася" },
-  { id: "p4", name: "Галя" },
-  { id: "p5", name: "Дима" },
-];
 
 function wrapper({ children }: { children: ReactNode }) {
   return <ParticipantsProvider>{children}</ParticipantsProvider>;
 }
 
 function seedPlayers({
-  players = DEFAULT_PLAYERS,
+  players = TEST_PLAYERS,
   ...options
 }: SeedStorageOptions = {}) {
   seedStorage({ players, ...options });
 }
 
 function expectParticipantsError(message: string) {
-  let caught: unknown;
-  try {
-    renderHook(() => useParticipants(), { wrapper });
-  } catch (error) {
-    caught = error;
-  }
-
-  expect(caught).toBeInstanceOf(CurrentGameValidationError);
-  expect((caught as CurrentGameValidationError).message).toBe(message);
+  expect(() => renderHook(() => useParticipants(), { wrapper })).toThrow(
+    new CurrentGameValidationError(message),
+  );
 }
 
 describe("ParticipantsContext", () => {
@@ -169,10 +156,7 @@ describe("ParticipantsContext", () => {
     seedPlayers({
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
-      teams: [
-        { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
-        { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
-      ],
+      teams: TEST_TEAMS,
     });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
@@ -271,25 +255,6 @@ describe("ParticipantsContext", () => {
     ).toBe("Боб + Галя");
   });
 
-  it("reuses an existing team when the pair order is reversed", () => {
-    seedPlayers({
-      selectedPlayerIds: ["p3", "p2", "p1", "p4"],
-      teamMode: true,
-      teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
-    });
-    const { result } = renderHook(() => useParticipants(), { wrapper });
-
-    act(() => {
-      result.current.commitTeamSelection();
-    });
-
-    expect(result.current.teams.filter((team) =>
-      team.playerIds[0] === "p1" && team.playerIds[1] === "p3",
-    )).toHaveLength(1);
-    expect(result.current.currentTeamIds.black).toBe("t1");
-    expect(result.current.getTeamById("t1")?.name).toBe("Старая гвардия");
-  });
-
   it("updates a team name by id", () => {
     seedPlayers({
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
@@ -315,7 +280,7 @@ describe("ParticipantsContext", () => {
     seedPlayers({
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
-      teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
+      teams: [TEST_TEAMS[0]],
     });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
@@ -329,7 +294,7 @@ describe("ParticipantsContext", () => {
       result.current.resetGame();
     });
 
-    expect(result.current.players).toEqual(DEFAULT_PLAYERS);
+    expect(result.current.players).toEqual(TEST_PLAYERS);
     expect(result.current.selectedPlayerIds).toEqual([]);
     expect(result.current.teamMode).toBe(false);
     expect(result.current.currentTeamIds).toEqual({ black: null, red: null });
@@ -351,13 +316,9 @@ describe("ParticipantsContext", () => {
     expect(readTeams()).toEqual(catalogBeforeReset);
   });
 
-  it("startGame sets gameStarted, trump, dealerId in context and localStorage without clearing scores", () => {
+  it("startGame sets gameStarted, trump, and dealerId", () => {
     seedPlayers({
       selectedPlayerIds: ["p1", "p2"],
-      gameStarted: true,
-      trump: "буби",
-      dealerId: "p1",
-      scores: { p1: 5, p2: 3 },
     });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
@@ -368,7 +329,7 @@ describe("ParticipantsContext", () => {
     expect(result.current.gameStarted).toBe(true);
     expect(result.current.trump).toBe("пики");
     expect(result.current.dealerId).toBe("p2");
-    expect(result.current.scores).toEqual({ p1: 5, p2: 3 });
+    expect(result.current.scores).toEqual({});
 
     expect(readCurrentGame()).toEqual({
       selectedPlayerIds: ["p1", "p2"],
@@ -377,7 +338,7 @@ describe("ParticipantsContext", () => {
       currentTeamIds: { black: null, red: null },
       trump: "пики",
       dealerId: "p2",
-      scores: { p1: 5, p2: 3 },
+      scores: {},
     });
   });
 
@@ -385,10 +346,7 @@ describe("ParticipantsContext", () => {
     seedPlayers({
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
-      teams: [
-        { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
-        { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
-      ],
+      teams: TEST_TEAMS,
       currentTeamIds: { black: "t1", red: "t2" },
       gameStarted: true,
       trump: "черви",
@@ -432,21 +390,15 @@ describe("ParticipantsContext", () => {
     expect(readCurrentGame().selectedPlayerIds).toEqual(["p1", "p3"]);
   });
 
-  it("clears started round and teams when setPlayerSelected or setTeamMode changes", () => {
-    const teams: Team[] = [
-      { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
-      { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
-    ];
-    seedPlayers({
+  it("clears currentTeamIds when setPlayerSelected or setTeamMode runs before the game starts", () => {
+    const preparedGame = {
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
-      teams,
+      teams: TEST_TEAMS,
       currentTeamIds: { black: "t1", red: "t2" },
-      gameStarted: true,
-      trump: "крести",
-      dealerId: "p1",
-      scores: { p1: 6, p2: 2 },
-    });
+      gameStarted: false,
+    };
+    seedPlayers(preparedGame);
     const { result, unmount } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -454,23 +406,12 @@ describe("ParticipantsContext", () => {
     });
 
     expect(result.current.selectedPlayerIds).toEqual(["p1", "p2", "p3"]);
+    expect(result.current.teamMode).toBe(true);
     expect(result.current.gameStarted).toBe(false);
-    expect(result.current.trump).toBeNull();
-    expect(result.current.dealerId).toBeNull();
-    expect(result.current.scores).toEqual({});
     expect(result.current.currentTeamIds).toEqual({ black: null, red: null });
     unmount();
 
-    seedPlayers({
-      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
-      teamMode: true,
-      teams,
-      currentTeamIds: { black: "t1", red: "t2" },
-      gameStarted: true,
-      trump: "буби",
-      dealerId: "p2",
-      scores: { p1: 1, p2: 7 },
-    });
+    seedPlayers(preparedGame);
     const secondHook = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -478,10 +419,13 @@ describe("ParticipantsContext", () => {
     });
 
     expect(secondHook.result.current.teamMode).toBe(false);
+    expect(secondHook.result.current.selectedPlayerIds).toEqual([
+      "p1",
+      "p2",
+      "p3",
+      "p4",
+    ]);
     expect(secondHook.result.current.gameStarted).toBe(false);
-    expect(secondHook.result.current.trump).toBeNull();
-    expect(secondHook.result.current.dealerId).toBeNull();
-    expect(secondHook.result.current.scores).toEqual({});
     expect(secondHook.result.current.currentTeamIds).toEqual({
       black: null,
       red: null,

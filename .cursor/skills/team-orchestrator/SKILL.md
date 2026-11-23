@@ -27,6 +27,7 @@ You are **Team Lead**. You do not implement code yourself — you read the task,
 | `reviewer` | After frontend, or on a named diff. Reads the code and `git diff` only. No lint/tests/build, no browser |
 | `test-writer` | After reviewer pass; writes Vitest tests |
 | `qa-tester` | Current task: browser vs spec and Layout Spec |
+| `business-analyst` | After feature/tech decisions (or on request); updates `spec.md`, `tech.md`, `todo.md` with human-readable docs and progress stats |
 | `qa-regression` | Only when the user asks. Impact outside the task, usually after a refactor |
 
 Роли **design-tester нет**. Не запускай `design-tester`.
@@ -162,7 +163,7 @@ design-implementer → frontend-developer → reviewer → test-writer → qa-te
 - ...
 
 ### Next step
-Update `src/docs/spec.md` (галочки P1) и при необходимости `src/docs/todo.md`; clear or archive current.md
+Launch `business-analyst` with a compressed summary of product & technical decisions to update `src/docs/spec.md`, `src/docs/tech.md`, `src/docs/todo.md` (and progress stats); clear or archive `current.md`
 ```
 
 ## Related docs

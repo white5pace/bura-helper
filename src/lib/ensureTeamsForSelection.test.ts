@@ -6,13 +6,9 @@ import {
   removePlayerFromCatalogs,
 } from "@/lib/ensureTeamsForSelection";
 import type { Team } from "@/lib/teamPair";
+import { TEST_PLAYERS, TEST_TEAMS } from "@/test/storage";
 
-const PLAYERS = [
-  { id: "p1", name: "Алиса" },
-  { id: "p2", name: "Боб" },
-  { id: "p3", name: "Вася" },
-  { id: "p4", name: "Галя" },
-];
+const players = TEST_PLAYERS.slice(0, 4);
 
 const CATALOG: Team[] = [
   { id: "t-keep", name: "Соседи", playerIds: ["p5", "p6"] },
@@ -20,8 +16,8 @@ const CATALOG: Team[] = [
 
 describe("defaultTeamName", () => {
   it("joins names in selection order", () => {
-    expect(defaultTeamName(["p1", "p3"], PLAYERS)).toBe("Алиса + Вася");
-    expect(defaultTeamName(["p3", "p1"], PLAYERS)).toBe("Вася + Алиса");
+    expect(defaultTeamName(["p1", "p3"], players)).toBe("Алиса + Вася");
+    expect(defaultTeamName(["p3", "p1"], players)).toBe("Вася + Алиса");
   });
 });
 
@@ -30,7 +26,7 @@ describe("ensureTeamsForSelection", () => {
     const result = ensureTeamsForSelection(
       CATALOG,
       ["p1", "p2", "p3"],
-      PLAYERS,
+      players,
       true,
     );
 
@@ -40,7 +36,7 @@ describe("ensureTeamsForSelection", () => {
     const off = ensureTeamsForSelection(
       CATALOG,
       ["p1", "p2", "p3", "p4"],
-      PLAYERS,
+      players,
       false,
     );
     expect(off.teams).toBe(CATALOG);
@@ -52,7 +48,7 @@ describe("ensureTeamsForSelection", () => {
     const result = ensureTeamsForSelection(
       [],
       ["p1", "p2", "p3", "p4"],
-      PLAYERS,
+      players,
       true,
       () => `id-${++n}`,
     );
@@ -65,14 +61,12 @@ describe("ensureTeamsForSelection", () => {
   });
 
   it("reuses an existing team for a reversed pair and keeps the saved name", () => {
-    const existing: Team[] = [
-      { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
-    ];
+    const existing: Team[] = [TEST_TEAMS[0]];
     let n = 0;
     const result = ensureTeamsForSelection(
       existing,
       ["p3", "p2", "p1", "p4"],
-      PLAYERS,
+      players,
       true,
       () => `new-${++n}`,
     );
@@ -95,8 +89,7 @@ describe("ensureTeamsForSelection", () => {
 describe("removePlayerFromCatalogs", () => {
   it("removes only teams that include the player and nulls matching current ids", () => {
     const teams: Team[] = [
-      { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
-      { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
+      ...TEST_TEAMS,
       { id: "t3", name: "Соседи", playerIds: ["p5", "p6"] },
     ];
     const currentTeamIds = { black: "t1", red: "t2" };
@@ -108,9 +101,7 @@ describe("removePlayerFromCatalogs", () => {
   });
 
   it("keeps the catalog and current ids when no team includes the player", () => {
-    const teams: Team[] = [
-      { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
-    ];
+    const teams: Team[] = [TEST_TEAMS[1]];
     const currentTeamIds = { black: null, red: "t2" };
 
     const result = removePlayerFromCatalogs(teams, currentTeamIds, "p1");

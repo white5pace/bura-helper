@@ -1,42 +1,27 @@
-import { render, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
-import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import type { Team } from "@/lib/teamPair";
 import Game from "@/pages/Game";
-import { readCurrentGame, seedStorage } from "@/test/storage";
+import { renderWithRouter } from "@/test/router";
+import { seedStorage, TEST_PLAYERS, TEST_TEAMS } from "@/test/storage";
 
-const PLAYERS = [
-  { id: "p1", name: "Алиса" },
-  { id: "p2", name: "Боб" },
-  { id: "p3", name: "Вася" },
-  { id: "p4", name: "Галя" },
-];
-
-const TEAMS: Team[] = [
-  { id: "t1", name: "Чёрная гвардия", playerIds: ["p1", "p3"] },
-  { id: "t2", name: "Красная стрела", playerIds: ["p2", "p4"] },
-];
+const players = TEST_PLAYERS.slice(0, 4);
 
 function renderGame() {
-  return render(
-    <ParticipantsProvider>
-      <MemoryRouter initialEntries={["/game"]}>
-        <Routes>
-          <Route path="/game" element={<Game />} />
-          <Route path="/round-end" element={<h1>Итоги раунда</h1>} />
-          <Route path="/" element={<h1>Меню</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </ParticipantsProvider>,
+  return renderWithRouter(
+    [
+      { path: "/game", element: <Game /> },
+      { path: "/round-end", element: <h1>Итоги раунда</h1> },
+      { path: "/", element: <h1>Меню</h1> },
+    ],
+    { initialEntries: ["/game"] },
   );
 }
 
 describe("Game page", () => {
   it("renders trump icon, player names, scores (with 0 fallback) and no team block in regular mode", () => {
     seedStorage({
-      players: PLAYERS,
+      players,
       selectedPlayerIds: ["p1", "p2"],
       gameStarted: true,
       trump: "пики",
@@ -59,7 +44,7 @@ describe("Game page", () => {
 
   it("renders dealer icon exactly once inside the dealer player card", () => {
     seedStorage({
-      players: PLAYERS,
+      players,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       gameStarted: true,
       trump: "пики",
@@ -87,7 +72,7 @@ describe("Game page", () => {
 
   it("seats 2 players in bottom-right and top-left (rotated) corners", () => {
     seedStorage({
-      players: PLAYERS,
+      players,
       selectedPlayerIds: ["p1", "p2"],
       gameStarted: true,
       trump: "пики",
@@ -109,7 +94,7 @@ describe("Game page", () => {
 
   it("seats 4 players with first two at bottom (not rotated) and 3rd/4th at top (rotated)", () => {
     seedStorage({
-      players: PLAYERS,
+      players,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       gameStarted: true,
       trump: "пики",
@@ -141,8 +126,8 @@ describe("Game page", () => {
 
   it("renders team names and red team score styling in team mode", () => {
     seedStorage({
-      players: PLAYERS,
-      teams: TEAMS,
+      players,
+      teams: TEST_TEAMS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
       gameStarted: true,
@@ -159,7 +144,7 @@ describe("Game page", () => {
     ] as const) {
       const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
-      expect(within(seat).getByText("Чёрная гвардия")).toBeInTheDocument();
+      expect(within(seat).getByText("Старая гвардия")).toBeInTheDocument();
       expect(within(seat).getByText(scoreText).className).not.toContain(
         "text-team",
       );
@@ -171,14 +156,14 @@ describe("Game page", () => {
     ] as const) {
       const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
-      expect(within(seat).getByText("Красная стрела")).toBeInTheDocument();
+      expect(within(seat).getByText("Новички")).toBeInTheDocument();
       expect(within(seat).getByText(scoreText).className).toContain("text-team");
     }
   });
 
   it("opens round-end confirmation dialog, cancels back to /game, and navigates to /round-end on confirm", async () => {
     seedStorage({
-      players: PLAYERS,
+      players,
       selectedPlayerIds: ["p1", "p2"],
       gameStarted: true,
       trump: "пики",
@@ -206,21 +191,5 @@ describe("Game page", () => {
     expect(
       await screen.findByRole("heading", { name: "Итоги раунда" }),
     ).toBeInTheDocument();
-  });
-
-  it("redirects silently to / when gameStarted is false without resetting selectedPlayerIds", async () => {
-    seedStorage({
-      players: PLAYERS,
-      selectedPlayerIds: ["p1", "p2"],
-      gameStarted: false,
-      trump: null,
-      dealerId: null,
-    });
-    renderGame();
-
-    expect(
-      await screen.findByRole("heading", { name: "Меню" }),
-    ).toBeInTheDocument();
-    expect(readCurrentGame().selectedPlayerIds).toEqual(["p1", "p2"]);
   });
 });

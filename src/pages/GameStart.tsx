@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useParticipants } from "@/contexts/ParticipantsContext";
 import { TRUMP_SUITS, type TrumpSuit } from "@/lib/currentGameStorage";
+import { MIN_PLAYER_COUNT } from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 
@@ -47,8 +48,9 @@ function GameStart() {
   } = useParticipants();
   const dealerId = selectedPlayerIds[0];
   const dealer = dealerId ? getPlayerById(dealerId) : undefined;
-  const missingTeams =
-    teamMode && (!currentTeamIds.black || !currentTeamIds.red);
+  const shouldLeave =
+    selectedPlayerIds.length < MIN_PLAYER_COUNT ||
+    (teamMode && (!currentTeamIds.black || !currentTeamIds.red));
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -59,10 +61,10 @@ function GameStart() {
   const { control, handleSubmit } = form;
 
   useEffect(() => {
-    if (!dealer || missingTeams) {
+    if (shouldLeave) {
       navigate("/participants", { replace: true });
     }
-  }, [dealer, missingTeams, navigate]);
+  }, [shouldLeave, navigate]);
 
   const beginGame = (data: FormValues) => {
     if (!dealer) {
@@ -72,7 +74,7 @@ function GameStart() {
     navigate("/game");
   };
 
-  if (!dealer || missingTeams) {
+  if (shouldLeave || !dealer) {
     return null;
   }
 

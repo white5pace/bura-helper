@@ -37,7 +37,7 @@
 - Кастомные компоненты проекта — в `src/shared/ui/`; страницы — в `src/pages/`.
 - Виджеты лежат в `src/widgets/`; `src/shared/ui/` по-прежнему без эффектов.
 - Импорты UI: `@/components/ui/...`, утилиты: `@/lib/utils`.
-- Иконки — только из `lucide-react`.
+- Иконки UI — из `lucide-react`; иконки мастей и игровых действий — в `src/assets/icons/`.
 - **Тёмная тема — приоритет 3.** Сначала эксперимент в Figma, затем токены Tailwind / shadcn. Светлая тема остаётся текущей.
 
 ---
@@ -48,12 +48,12 @@
 - Ключи хранения — константы в одном месте (контекст или модуль storage). Сейчас три ключа:
   - `players` — ростер игроков (долгоживущий)
   - `teams` — каталог пар/команд (долгоживущий)
-  - `currentGame` — сессия партии (`selectedPlayerIds`, `teamMode`, `gameStarted`, `currentTeamIds`, `trump`, `dealerId`, `scores`). `gameStarted` — партия начата: `true` только вместе с непустым составом, козырём и раздающим из этого состава; в командном режиме ещё и ровно четыре игрока и обе команды. Пока `false`, козырь, раздающий и счёт пустые; команды в сессии допустимы только при включённом командном режиме и только обе сразу на четырёх игроков. `scores` — очки по id игрока; нет ключа значит 0, до итогов раунда не начисляются
-- Модуль сессии: `src/lib/currentGameStorage.ts` (`load` / `save` / `defaultCurrentGame`). `currentGame` валидируется строго: схема Zod и проверка ссылок на `players` и `teams`, без тихой обрезки и фильтрации. Если ключа нет — пустая сессия (`gameStarted: false`). Если JSON битый, схема не проходит или ссылка ведёт на несуществующего игрока или команду — выбрасывается `CurrentGameValidationError` с конкретной причиной в `message`.
-- `CurrentGameValidationError` перехватывает `SessionErrorBoundary`: экран предлагает «Начать новую игру» и сбрасывает только `currentGame`. Другие ошибки рендера граница не маскирует и пробрасывает дальше. Каталоги `players`, `teams` и будущая `gameHistory` сохраняются.
+  - `currentGame` — сессия партии (`selectedPlayerIds`, `teamMode`, `gameStarted`, `currentTeamIds`, `trump`, `dealerId`, `scores`). `gameStarted` — партия начата: `true` только вместе с непустым составом (минимум `MIN_PLAYER_COUNT = 2` в `src/lib/gameRules.ts`, иначе ошибка валидации «В начатой игре должно быть минимум два игрока»), козырём и раздающим из этого состава; в командном режиме ещё и ровно `TEAM_MODE_PLAYER_COUNT = 4` игрока и обе команды. Пока `false`, козырь, раздающий и счёт пустые; команды в сессии допустимы только при включённом командном режиме и только обе сразу на четырёх игроков. `scores` — очки по id игрока; нет ключа значит 0, до итогов раунда не начисляются
+- Модуль сессии: `src/lib/currentGameStorage.ts` (`load` / `save` / `defaultCurrentGame`). `currentGame` валидируется строго: схема Zod, константа `TYPE_MISMATCH_MESSAGE` и проверка ссылок на `players` и `teams`, без тихой нормализации и фильтрации. Если ключа нет — пустая сессия (`gameStarted: false`). Если JSON битый, схема не проходит или ссылка ведёт на несуществующего игрока или команду — выбрасывается `CurrentGameValidationError` с конкретной причиной в `message`.
+- `CurrentGameValidationError` перехватывает `SessionErrorBoundary` (`src/widgets/session-error-boundary/`, оборачивает `ParticipantsProvider` в `App.tsx`): экран предлагает «Начать новую игру» и сбрасывает только `currentGame`. Другие ошибки рендера граница не маскирует и пробрасывает дальше. Каталоги `players`, `teams` и будущая `gameHistory` сохраняются.
 - «Начать новую игру» (`resetGame` и кнопка восстановления) пишет пустой `currentGame`, не трогая `players` и `teams`.
 - Удаление участника уже сформированной или начатой партии (`gameStarted` или заданные `currentTeamIds`) делает продолжение текущей сессии невозможным и сбрасывает `currentGame`. Завершённые игры в истории при этом сохраняются. Если игрок только отмечен на этапе выбора и партия ещё не сформирована, он убирается из `selectedPlayerIds`.
-- Экран подготовки (`/game-start`) без раздающего или без обеих команд в командном режиме тихо уходит на `/participants` (`replace`), без сброса сессии. Главный экран игры (`/game`) без начатой партии или без козыря тихо уходит на `/` (`replace`), тоже без сброса. `/teams` без командного режима, без четырёх игроков или без обеих команд тихо уходит на `/participants`.
+- Экран подготовки (`/game-start`) при `< 2` игроков (`MIN_PLAYER_COUNT`), без раздающего или без обеих команд в командном режиме тихо уходит на `/participants` (`replace`), без сброса сессии. Главный экран игры (`/game`) без начатой партии или без козыря тихо уходит на `/` (`replace`), тоже без сброса. `/teams` без командного режима, без четырёх игроков или без обеих команд тихо уходит на `/participants`.
 - Состав команды — множество из двух id: порядок выбора не важен, одна пара игроков — одна запись в `teams` (`normalizePair` / `samePair`). Имена в партии читаются по `currentTeamIds` из каталога, не дублируются в сессии.
 - Upsert в `teams` и запись `currentTeamIds` — по «Продолжить» на выборе игроков (командный режим, 4 игрока).
 - In-memory индекс по паре игроков **не делать сейчас**: каталог маленький, линейный `find` достаточен; индекс не персистить.
@@ -84,6 +84,8 @@
 
 - Маршруты объявляются в `App.tsx` через `createBrowserRouter`.
 - Общая обёртка страниц — `MainLayout`.
+- Экраны подготовки (`/participants`, `/participants/player/:id?`, `/teams`, `/game-start`) объединены под pathless layout-роутом `RequireNotStarted` (`src/layouts/RequireNotStarted.tsx`): при `gameStarted === true` он автоматически перенаправляет на `/game` (`replace`, без промежуточного экрана уведомления). Одиночные проверки состояния для `/teams` и `/game-start` остаются на уровне самих страниц.
+- Игровые экраны (`/game`, `/round-end`, `/game-end`) объединены под pathless layout-роутом `RequireStartedGame` (`src/layouts/RequireStartedGame.tsx`): при `!gameStarted` он перенаправляет на `/` (`replace`).
 - Параметры маршрута (`:id?`) — для режимов создания и редактирования на одной странице.
 
 ---
@@ -115,9 +117,12 @@ src/
 
 - **E2E и скриншот-тесты — приоритет 3.** Пока в репозитории только Vitest.
 
-- Запуск: `npm test`, watch: `npm run test:watch`
+- Запуск: `npm test`, watch: `npm run test:watch` (`describe` / `it` — на английском)
 - Setup: `src/test/setup.ts` — мок localStorage, cleanup
-- Helpers: `src/test/render.tsx` — `renderWithProviders` (Router + Context)
+- Helpers:
+  - `src/test/storage.ts` — `seedStorage`, `TEST_PLAYERS`, `TEST_TEAMS`
+  - `src/test/router.tsx` — `renderWithRouter` на базе `createMemoryRouter`
+  - `src/test/render.tsx` — `renderWithProviders` (Router + Context)
 - Файлы тестов: `src/**/*.test.ts`, `src/**/*.test.tsx`
 - Sub-agent: [test-writer.md](./agents/test-writer.md)
 

@@ -157,14 +157,6 @@ function useSyncedSession(players: Player[], teams: Team[]) {
     scores,
   ]);
 
-  const clearStartedRound = useCallback(() => {
-    setGameStarted(false);
-    setTrump(null);
-    setDealerId(null);
-    setScores({});
-    setCurrentTeamIds(EMPTY_CURRENT_TEAM_IDS);
-  }, []);
-
   const setPlayerSelected = useCallback(
     (id: string, selected: boolean) => {
       const prev = selectedPlayerIdsRef.current;
@@ -181,22 +173,19 @@ function useSyncedSession(players: Player[], teams: Team[]) {
         : prev.filter((playerId) => playerId !== id);
       selectedPlayerIdsRef.current = next;
       setSelectedPlayerIds(next);
-      clearStartedRound();
+      setCurrentTeamIds(EMPTY_CURRENT_TEAM_IDS);
     },
-    [clearStartedRound],
+    [],
   );
 
-  const setTeamMode = useCallback(
-    (enabled: boolean) => {
-      if (teamModeRef.current === enabled) {
-        return;
-      }
-      teamModeRef.current = enabled;
-      setTeamModeState(enabled);
-      clearStartedRound();
-    },
-    [clearStartedRound],
-  );
+  const setTeamMode = useCallback((enabled: boolean) => {
+    if (teamModeRef.current === enabled) {
+      return;
+    }
+    teamModeRef.current = enabled;
+    setTeamModeState(enabled);
+    setCurrentTeamIds(EMPTY_CURRENT_TEAM_IDS);
+  }, []);
 
   const resetGame = useCallback(() => {
     const empty = defaultCurrentGame();

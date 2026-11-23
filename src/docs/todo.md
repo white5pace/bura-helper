@@ -4,6 +4,7 @@
 
 - [x] Применить новые варианты `Button` (`iconSize` и пр.) на существующих экранах (Home, Participants, формы)
 - [x] Расширить сессию `currentGame` полями партии: козырь, раздающий, счёт (и контекст вокруг них)
-- [ ] Маршруты `/game`, `/round-end`, `/game-end`
+- [x] Маршрут `/game` (главный экран партии, включая `GameCard`, `PlayerCard` и `SessionErrorBoundary`)
+- [ ] Маршруты `/round-end`, `/game-end` (пока заглушки)
 - [ ] Исправить `npm run build` (TS5101: deprecated `baseUrl` в tsconfig)
 - [ ] Привести компоненты к нативному виду в дизайне, затем в самом приложении

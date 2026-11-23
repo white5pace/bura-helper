@@ -3,6 +3,7 @@ import { Toaster } from "./components/ui/toast";
 import { ParticipantsProvider } from "./contexts/ParticipantsContext";
 import MainLayout from "./layouts/MainLayout";
 import RequireNotStarted from "./layouts/RequireNotStarted";
+import RequireStartedGame from "./layouts/RequireStartedGame";
 import SessionErrorBoundary from "./widgets/session-error-boundary/SessionErrorBoundary";
 import Game from "./pages/Game";
 import GameStart from "./pages/GameStart";
@@ -26,9 +27,14 @@ const router = createBrowserRouter([
           { path: "/game-start", element: <GameStart /> },
         ],
       },
-      { path: "/game", element: <Game /> },
-      { path: "/round-end", element: <p>Завершение раунда</p> },
-      { path: "/game-end", element: <p>Завершение игры</p> },
+      {
+        element: <RequireStartedGame />,
+        children: [
+          { path: "/game", element: <Game /> },
+          { path: "/round-end", element: <p>Завершение раунда</p> },
+          { path: "/game-end", element: <p>Завершение игры</p> },
+        ],
+      },
     ],
   },
 ]);
