@@ -3,12 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import {
-  CURRENT_GAME_STORAGE_KEY,
-  type CurrentGame,
-} from "@/lib/currentGameStorage";
-import type { Team } from "@/lib/teamPair";
 import GameStart from "@/pages/GameStart";
+import { readCurrentGame, readPlayers, seedStorage } from "@/test/storage";
 
 const PLAYERS = [
   { id: "p1", name: "Алиса" },
@@ -18,38 +14,6 @@ const PLAYERS = [
 ];
 
 const SUITS = ["крести", "пики", "черви", "буби"] as const;
-
-function seedParticipants({
-  players = PLAYERS,
-  selectedPlayerIds = [] as string[],
-  teamMode = false,
-  teams = [] as Team[],
-} = {}) {
-  localStorage.setItem("players", JSON.stringify(players));
-  localStorage.setItem("teams", JSON.stringify(teams));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds,
-      teamMode,
-      gameStarted: false,
-      currentTeamIds: { black: null, red: null },
-      trump: null,
-      dealerId: null,
-      scores: {},
-    } satisfies CurrentGame),
-  );
-}
-
-function readCurrentGame(): CurrentGame {
-  return JSON.parse(
-    localStorage.getItem(CURRENT_GAME_STORAGE_KEY)!,
-  ) as CurrentGame;
-}
-
-function readPlayers() {
-  return JSON.parse(localStorage.getItem("players") ?? "[]") as typeof PLAYERS;
-}
 
 function renderGameStart() {
   return render(
@@ -67,8 +31,8 @@ function renderGameStart() {
 }
 
 describe("GameStart page", () => {
-  it("показывает раздающим первого выбранного и не выбирает масть", () => {
-    seedParticipants({ selectedPlayerIds: ["p2", "p1"] });
+  it("shows the first selected player as dealer and leaves the suit unselected", () => {
+    seedStorage({ players: PLAYERS, selectedPlayerIds: ["p2", "p1"] });
     renderGameStart();
 
     expect(screen.getByRole("heading", { name: "Подготовка" })).toBeInTheDocument();
@@ -90,8 +54,8 @@ describe("GameStart page", () => {
     ).toBeInTheDocument();
   });
 
-  it("без козыря остаётся на странице и не записывает партию", async () => {
-    seedParticipants({ selectedPlayerIds: ["p2", "p1"] });
+  it("stays on the page and does not save the round when no trump is chosen", async () => {
+    seedStorage({ players: PLAYERS, selectedPlayerIds: ["p2", "p1"] });
     const user = userEvent.setup();
     renderGameStart();
 
@@ -113,8 +77,8 @@ describe("GameStart page", () => {
     });
   });
 
-  it("записывает выбранные черви и раздающего и открывает игру", async () => {
-    seedParticipants({ selectedPlayerIds: ["p2", "p1"] });
+  it("saves hearts and the dealer, then opens the game", async () => {
+    seedStorage({ players: PLAYERS, selectedPlayerIds: ["p2", "p1"] });
     const user = userEvent.setup();
     renderGameStart();
 
@@ -138,8 +102,8 @@ describe("GameStart page", () => {
     });
   });
 
-  it("без выбранных игроков тихо перенаправляет на участников", async () => {
-    seedParticipants({ teamMode: true });
+  it("redirects to participants without a message when no players are selected", async () => {
+    seedStorage({ players: PLAYERS, teamMode: true });
     renderGameStart();
 
     expect(
@@ -163,8 +127,9 @@ describe("GameStart page", () => {
     expect(readPlayers()).toEqual(PLAYERS);
   });
 
-  it("при teamMode без сформированных команд тихо перенаправляет на участников", async () => {
-    seedParticipants({
+  it("redirects to participants without a message when team mode has no formed teams", async () => {
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
     });

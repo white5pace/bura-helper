@@ -4,7 +4,7 @@ import { useParticipants } from "@/contexts/ParticipantsContext";
 
 function Home() {
   const navigate = useNavigate();
-  const { resetGame } = useParticipants();
+  const { gameStarted, resetGame } = useParticipants();
 
   return (
     <div>
@@ -19,9 +19,16 @@ function Home() {
       >
         Начать новую игру
       </Button>
-      <Button variant="outline" size="lg" className="w-full ">
-        Продолжить
-      </Button>
+      {gameStarted ? (
+        <Button
+          variant="outline"
+          size="lg"
+          className="w-full "
+          onClick={() => navigate("/game")}
+        >
+          Продолжить
+        </Button>
+      ) : null}
     </div>
   );
 }

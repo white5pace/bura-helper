@@ -8,10 +8,16 @@ import {
 import {
   CURRENT_GAME_STORAGE_KEY,
   CurrentGameValidationError,
+  TYPE_MISMATCH_MESSAGE,
   defaultCurrentGame,
-  type CurrentGame,
 } from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
+import {
+  readCurrentGame,
+  readTeams,
+  seedStorage,
+  type SeedStorageOptions,
+} from "@/test/storage";
 
 const DEFAULT_PLAYERS = [
   { id: "p1", name: "Алиса" },
@@ -25,33 +31,23 @@ function wrapper({ children }: { children: ReactNode }) {
   return <ParticipantsProvider>{children}</ParticipantsProvider>;
 }
 
-function readCurrentGame(): CurrentGame {
-  return JSON.parse(localStorage.getItem(CURRENT_GAME_STORAGE_KEY)!) as CurrentGame;
+function seedPlayers({
+  players = DEFAULT_PLAYERS,
+  ...options
+}: SeedStorageOptions = {}) {
+  seedStorage({ players, ...options });
 }
 
-function seedPlayers(
-  players = DEFAULT_PLAYERS,
-  selectedPlayerIds: string[] = [],
-  teamMode = false,
-  teams: Team[] = [],
-  currentTeamIds: CurrentGame["currentTeamIds"] = { black: null, red: null },
-  extra: Partial<Pick<CurrentGame, "gameStarted" | "trump" | "dealerId" | "scores">> = {},
-) {
-  localStorage.setItem("players", JSON.stringify(players));
-  localStorage.setItem("teams", JSON.stringify(teams));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds,
-      teamMode,
-      gameStarted: false,
-      currentTeamIds,
-      trump: null,
-      dealerId: null,
-      scores: {},
-      ...extra,
-    } satisfies CurrentGame),
-  );
+function expectParticipantsError(message: string) {
+  let caught: unknown;
+  try {
+    renderHook(() => useParticipants(), { wrapper });
+  } catch (error) {
+    caught = error;
+  }
+
+  expect(caught).toBeInstanceOf(CurrentGameValidationError);
+  expect((caught as CurrentGameValidationError).message).toBe(message);
 }
 
 describe("ParticipantsContext", () => {
@@ -116,7 +112,7 @@ describe("ParticipantsContext", () => {
   });
 
   it("preserves remaining order after deselecting a player", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3"]);
+    seedPlayers({ selectedPlayerIds: ["p1", "p2", "p3"] });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -142,7 +138,7 @@ describe("ParticipantsContext", () => {
   });
 
   it("does not add a duplicate selection", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1"]);
+    seedPlayers({ selectedPlayerIds: ["p1"] });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -153,7 +149,7 @@ describe("ParticipantsContext", () => {
   });
 
   it("removes a deleted player from the selection", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3"]);
+    seedPlayers({ selectedPlayerIds: ["p1", "p2", "p3"] });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -170,15 +166,14 @@ describe("ParticipantsContext", () => {
   });
 
   it("removes catalog teams that include a deleted player", async () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2", "p3", "p4"],
-      true,
-      [
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      teams: [
         { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
         { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
       ],
-    );
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -225,7 +220,7 @@ describe("ParticipantsContext", () => {
   });
 
   it("restores selectedPlayerIds and teamMode from currentGame", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p4", "p1"], true);
+    seedPlayers({ selectedPlayerIds: ["p4", "p1"], teamMode: true });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     expect(result.current.selectedPlayerIds).toEqual(["p4", "p1"]);
@@ -233,7 +228,10 @@ describe("ParticipantsContext", () => {
   });
 
   it("does not create catalog teams until commitTeamSelection", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4"], true);
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     expect(result.current.teams).toEqual([]);
@@ -241,7 +239,10 @@ describe("ParticipantsContext", () => {
   });
 
   it("creates catalog teams and currentTeamIds for a full team selection", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4"], true);
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -271,12 +272,11 @@ describe("ParticipantsContext", () => {
   });
 
   it("reuses an existing team when the pair order is reversed", () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p3", "p2", "p1", "p4"],
-      true,
-      [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
-    );
+    seedPlayers({
+      selectedPlayerIds: ["p3", "p2", "p1", "p4"],
+      teamMode: true,
+      teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -291,7 +291,10 @@ describe("ParticipantsContext", () => {
   });
 
   it("updates a team name by id", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4"], true);
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -309,12 +312,11 @@ describe("ParticipantsContext", () => {
   });
 
   it("resets the current game state without clearing the teams catalog", () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2", "p3", "p4"],
-      true,
-      [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
-    );
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -346,25 +348,17 @@ describe("ParticipantsContext", () => {
       dealerId: null,
       scores: {},
     });
-    expect(JSON.parse(localStorage.getItem("teams")!)).toEqual(
-      catalogBeforeReset,
-    );
+    expect(readTeams()).toEqual(catalogBeforeReset);
   });
 
   it("startGame sets gameStarted, trump, dealerId in context and localStorage without clearing scores", () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2"],
-      false,
-      [],
-      { black: null, red: null },
-      {
-        gameStarted: true,
-        trump: "буби",
-        dealerId: "p1",
-        scores: { p1: 5, p2: 3 },
-      },
-    );
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2"],
+      gameStarted: true,
+      trump: "буби",
+      dealerId: "p1",
+      scores: { p1: 5, p2: 3 },
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -388,22 +382,19 @@ describe("ParticipantsContext", () => {
   });
 
   it("resets currentGame on deleting a selected player when hasCommittedSession is true, but preserves session when deleting an unselected player", () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2", "p3", "p4"],
-      true,
-      [
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      teams: [
         { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
         { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
       ],
-      { black: "t1", red: "t2" },
-      {
-        gameStarted: true,
-        trump: "черви",
-        dealerId: "p1",
-        scores: { p1: 4, p2: 2 },
-      },
-    );
+      currentTeamIds: { black: "t1", red: "t2" },
+      gameStarted: true,
+      trump: "черви",
+      dealerId: "p1",
+      scores: { p1: 4, p2: 2 },
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     expect(result.current.hasCommittedSession).toBe(true);
@@ -428,7 +419,7 @@ describe("ParticipantsContext", () => {
   });
 
   it("only removes player from selectedPlayerIds on deletePlayer when hasCommittedSession is false", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3"]);
+    seedPlayers({ selectedPlayerIds: ["p1", "p2", "p3"] });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     expect(result.current.hasCommittedSession).toBe(false);
@@ -446,19 +437,16 @@ describe("ParticipantsContext", () => {
       { id: "t1", name: "Команда 1", playerIds: ["p1", "p3"] },
       { id: "t2", name: "Команда 2", playerIds: ["p2", "p4"] },
     ];
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2", "p3", "p4"],
-      true,
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
       teams,
-      { black: "t1", red: "t2" },
-      {
-        gameStarted: true,
-        trump: "крести",
-        dealerId: "p1",
-        scores: { p1: 6, p2: 2 },
-      },
-    );
+      currentTeamIds: { black: "t1", red: "t2" },
+      gameStarted: true,
+      trump: "крести",
+      dealerId: "p1",
+      scores: { p1: 6, p2: 2 },
+    });
     const { result, unmount } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -473,19 +461,16 @@ describe("ParticipantsContext", () => {
     expect(result.current.currentTeamIds).toEqual({ black: null, red: null });
     unmount();
 
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2", "p3", "p4"],
-      true,
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
       teams,
-      { black: "t1", red: "t2" },
-      {
-        gameStarted: true,
-        trump: "буби",
-        dealerId: "p2",
-        scores: { p1: 1, p2: 7 },
-      },
-    );
+      currentTeamIds: { black: "t1", red: "t2" },
+      gameStarted: true,
+      trump: "буби",
+      dealerId: "p2",
+      scores: { p1: 1, p2: 7 },
+    });
     const secondHook = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -504,19 +489,13 @@ describe("ParticipantsContext", () => {
   });
 
   it("resetGame clears a started game with trump, dealerId, and scores", () => {
-    seedPlayers(
-      DEFAULT_PLAYERS,
-      ["p1", "p2"],
-      false,
-      [],
-      { black: null, red: null },
-      {
-        gameStarted: true,
-        trump: "пики",
-        dealerId: "p2",
-        scores: { p1: 8, p2: 4 },
-      },
-    );
+    seedPlayers({
+      selectedPlayerIds: ["p1", "p2"],
+      gameStarted: true,
+      trump: "пики",
+      dealerId: "p2",
+      scores: { p1: 8, p2: 4 },
+    });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
     act(() => {
@@ -532,19 +511,17 @@ describe("ParticipantsContext", () => {
   });
 
   it("throws CurrentGameValidationError for unknown or extra selected ids", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["missing", "p2"]);
+    seedPlayers({ selectedPlayerIds: ["missing", "p2"] });
     expectParticipantsError("Сессия ссылается на несуществующего игрока");
 
-    seedPlayers(DEFAULT_PLAYERS, ["p1", "p2", "p3", "p4", "p5"]);
+    seedPlayers({ selectedPlayerIds: ["p1", "p2", "p3", "p4", "p5"] });
     expectParticipantsError("В партии не больше четырёх игроков");
   });
 
   it("throws CurrentGameValidationError when the stored game has the wrong type", () => {
-    seedPlayers(DEFAULT_PLAYERS, ["p1"]);
+    seedPlayers({ selectedPlayerIds: ["p1"] });
     localStorage.setItem(CURRENT_GAME_STORAGE_KEY, "null");
-    expectParticipantsError(
-      "Данные текущей игры не соответствуют ожидаемому типу",
-    );
+    expectParticipantsError(TYPE_MISMATCH_MESSAGE);
 
     localStorage.setItem(
       CURRENT_GAME_STORAGE_KEY,
@@ -558,20 +535,6 @@ describe("ParticipantsContext", () => {
         scores: {},
       }),
     );
-    expectParticipantsError(
-      "Данные текущей игры не соответствуют ожидаемому типу",
-    );
+    expectParticipantsError(TYPE_MISMATCH_MESSAGE);
   });
 });
-
-function expectParticipantsError(message: string) {
-  let caught: unknown;
-  try {
-    renderHook(() => useParticipants(), { wrapper });
-  } catch (error) {
-    caught = error;
-  }
-
-  expect(caught).toBeInstanceOf(CurrentGameValidationError);
-  expect((caught as CurrentGameValidationError).message).toBe(message);
-}

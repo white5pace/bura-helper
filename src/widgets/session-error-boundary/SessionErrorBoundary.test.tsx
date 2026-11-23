@@ -4,13 +4,15 @@ import { Component, type ReactNode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import {
-  CURRENT_GAME_STORAGE_KEY,
-  defaultCurrentGame,
-  type CurrentGame,
-} from "@/lib/currentGameStorage";
+import { defaultCurrentGame } from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
 import GameStart from "@/pages/GameStart";
+import {
+  readCurrentGame,
+  readPlayers,
+  readTeams,
+  seedStorage,
+} from "@/test/storage";
 import SessionErrorBoundary from "@/widgets/session-error-boundary/SessionErrorBoundary";
 
 const PLAYERS = [
@@ -26,37 +28,6 @@ const TEAMS: Team[] = [
 
 const SESSION_ERROR_TEXT =
   "Не удалось загрузить текущую игру: данные сессии повреждены или участники были изменены.";
-
-function seedBrokenSession() {
-  localStorage.setItem("players", JSON.stringify(PLAYERS));
-  localStorage.setItem("teams", JSON.stringify(TEAMS));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds: ["missing"],
-      teamMode: false,
-      gameStarted: false,
-      currentTeamIds: { black: null, red: null },
-      trump: null,
-      dealerId: null,
-      scores: {},
-    } satisfies CurrentGame),
-  );
-}
-
-function readCurrentGame(): CurrentGame {
-  return JSON.parse(
-    localStorage.getItem(CURRENT_GAME_STORAGE_KEY)!,
-  ) as CurrentGame;
-}
-
-function readPlayers() {
-  return JSON.parse(localStorage.getItem("players") ?? "[]") as typeof PLAYERS;
-}
-
-function readTeams() {
-  return JSON.parse(localStorage.getItem("teams") ?? "[]") as Team[];
-}
 
 class ProbeBoundary extends Component<
   { children: ReactNode },
@@ -81,8 +52,12 @@ function Crash(): ReactNode {
 }
 
 describe("SessionErrorBoundary", () => {
-  it("восстанавливает сессию при CurrentGameValidationError и сохраняет игроков и команды", async () => {
-    seedBrokenSession();
+  it("recovers the session on CurrentGameValidationError and keeps players and teams", async () => {
+    seedStorage({
+      players: PLAYERS,
+      teams: TEAMS,
+      selectedPlayerIds: ["missing"],
+    });
     const user = userEvent.setup();
     render(
       <SessionErrorBoundary>
@@ -118,8 +93,12 @@ describe("SessionErrorBoundary", () => {
     expect(readTeams()).toEqual(TEAMS);
   });
 
-  it("вызывает переданный колбэк onReset при нажатии «Начать новую игру»", async () => {
-    seedBrokenSession();
+  it("calls the provided onReset callback when starting a new game", async () => {
+    seedStorage({
+      players: PLAYERS,
+      teams: TEAMS,
+      selectedPlayerIds: ["missing"],
+    });
     const onReset = vi.fn();
     const user = userEvent.setup();
 
@@ -147,7 +126,7 @@ describe("SessionErrorBoundary", () => {
     ).toBeInTheDocument();
   });
 
-  it("пробрасывает постороннюю ошибку Error наружу", () => {
+  it("rethrows an unrelated Error", () => {
     render(
       <ProbeBoundary>
         <SessionErrorBoundary>

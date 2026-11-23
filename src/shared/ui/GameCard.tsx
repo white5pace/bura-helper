@@ -85,7 +85,11 @@ function GameCard({
           : undefined;
 
         return (
-          <div key={player.id} className={corner.className}>
+          <div
+            key={player.id}
+            data-testid={`seat-${player.id}`}
+            className={corner.className}
+          >
             <PlayerCard
               name={player.name}
               score={scores[player.id] ?? 0}

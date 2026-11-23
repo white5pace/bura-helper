@@ -2,6 +2,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Toaster } from "./components/ui/toast";
 import { ParticipantsProvider } from "./contexts/ParticipantsContext";
 import MainLayout from "./layouts/MainLayout";
+import RequireNotStarted from "./layouts/RequireNotStarted";
 import SessionErrorBoundary from "./widgets/session-error-boundary/SessionErrorBoundary";
 import Game from "./pages/Game";
 import GameStart from "./pages/GameStart";
@@ -16,10 +17,15 @@ const router = createBrowserRouter([
     element: <MainLayout />,
     children: [
       { index: true, element: <Home /> },
-      { path: "/participants", element: <Participants /> },
-      { path: "/participants/player/:id?", element: <Player /> },
-      { path: "/teams", element: <Teams /> },
-      { path: "/game-start", element: <GameStart /> },
+      {
+        element: <RequireNotStarted />,
+        children: [
+          { path: "/participants", element: <Participants /> },
+          { path: "/participants/player/:id?", element: <Player /> },
+          { path: "/teams", element: <Teams /> },
+          { path: "/game-start", element: <GameStart /> },
+        ],
+      },
       { path: "/game", element: <Game /> },
       { path: "/round-end", element: <p>Завершение раунда</p> },
       { path: "/game-end", element: <p>Завершение игры</p> },

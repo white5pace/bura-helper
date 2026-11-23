@@ -14,7 +14,7 @@ export class CurrentGameValidationError extends Error {
   }
 }
 
-const TYPE_MISMATCH_MESSAGE =
+export const TYPE_MISMATCH_MESSAGE =
   "Данные текущей игры не соответствуют ожидаемому типу";
 
 const currentTeamIdsSchema = z.object({

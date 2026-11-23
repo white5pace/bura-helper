@@ -4,16 +4,12 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { Toaster } from "@/components/ui/toast";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import {
-  CURRENT_GAME_STORAGE_KEY,
-  defaultCurrentGame,
-  type CurrentGame,
-  type TrumpSuit,
-} from "@/lib/currentGameStorage";
-import type { Team } from "@/lib/teamPair";
+import { defaultCurrentGame } from "@/lib/currentGameStorage";
+import RequireNotStarted from "@/layouts/RequireNotStarted";
 import GameStart from "@/pages/GameStart";
 import Participants from "@/pages/Participants";
 import Teams from "@/pages/Teams";
+import { readCurrentGame, readTeams, seedStorage } from "@/test/storage";
 
 const FIVE_PLAYERS = [
   { id: "p1", name: "Алиса" },
@@ -23,49 +19,19 @@ const FIVE_PLAYERS = [
   { id: "p5", name: "Дима" },
 ];
 
-function seedParticipants({
-  players = FIVE_PLAYERS,
-  selectedPlayerIds = [] as string[],
-  teamMode = false,
-  teams = [] as Team[],
-  currentTeamIds = { black: null, red: null } as CurrentGame["currentTeamIds"],
-  gameStarted = false,
-  trump = null as TrumpSuit | null,
-  dealerId = null as string | null,
-  scores = {} as Record<string, number>,
-} = {}) {
-  localStorage.setItem("players", JSON.stringify(players));
-  localStorage.setItem("teams", JSON.stringify(teams));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds,
-      teamMode,
-      gameStarted,
-      currentTeamIds,
-      trump,
-      dealerId,
-      scores,
-    } satisfies CurrentGame),
-  );
-}
-
-function readCurrentGame(): CurrentGame {
-  return JSON.parse(
-    localStorage.getItem(CURRENT_GAME_STORAGE_KEY)!,
-  ) as CurrentGame;
-}
-
-// todo: нужно вынести роуты в отдельный компонент и сделать отдельную функцию renderWithRouter
+// todo: extract routes into a shared component and a renderWithRouter helper
 function renderParticipants() {
   return render(
     <ParticipantsProvider>
       <Toaster>
         <MemoryRouter initialEntries={["/participants"]}>
           <Routes>
-            <Route path="/participants" element={<Participants />} />
-            <Route path="/teams" element={<Teams />} />
-            <Route path="/game-start" element={<GameStart />} />
+            <Route element={<RequireNotStarted />}>
+              <Route path="/participants" element={<Participants />} />
+              <Route path="/teams" element={<Teams />} />
+              <Route path="/game-start" element={<GameStart />} />
+            </Route>
+            <Route path="/game" element={<h1>Игра</h1>} />
           </Routes>
         </MemoryRouter>
       </Toaster>
@@ -79,7 +45,7 @@ function checkboxFor(name: string) {
 
 describe("Participants page", () => {
   it("hides the selection counter until team mode is enabled", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2"] });
+    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -97,7 +63,11 @@ describe("Participants page", () => {
   });
 
   it("hides the selection counter when team mode is turned off", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1"], teamMode: true });
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1"],
+      teamMode: true,
+    });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -109,7 +79,7 @@ describe("Participants page", () => {
   });
 
   it("updates the counter when players are selected in team mode", async () => {
-    seedParticipants({ teamMode: true });
+    seedStorage({ players: FIVE_PLAYERS, teamMode: true });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -124,7 +94,11 @@ describe("Participants page", () => {
   });
 
   it("shows a toast and stays on the page when continuing in team mode without 4 players", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2"], teamMode: true });
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1", "p2"],
+      teamMode: true,
+    });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -142,7 +116,8 @@ describe("Participants page", () => {
   });
 
   it("navigates to /teams when continuing in team mode with 4 players", async () => {
-    seedParticipants({
+    seedStorage({
+      players: FIVE_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
     });
@@ -159,9 +134,7 @@ describe("Participants page", () => {
     ).not.toBeInTheDocument();
 
     await waitFor(() => {
-      const storedTeams = JSON.parse(
-        localStorage.getItem("teams") ?? "[]",
-      ) as Team[];
+      const storedTeams = readTeams();
       expect(storedTeams).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -180,7 +153,7 @@ describe("Participants page", () => {
   });
 
   it("navigates to /game-start when continuing without team mode", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1"] });
+    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -192,7 +165,10 @@ describe("Participants page", () => {
   });
 
   it("disables unselected checkboxes at the limit and allows unchecking selected ones", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2", "p3", "p4"] });
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+    });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -215,7 +191,8 @@ describe("Participants page", () => {
   });
 
   it("applies team tone to even order numbers (2 and 4) in team mode", () => {
-    seedParticipants({
+    seedStorage({
+      players: FIVE_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
     });
@@ -232,7 +209,10 @@ describe("Participants page", () => {
   });
 
   it("keeps default checkbox tone when team mode is off", () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2", "p3", "p4"] });
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+    });
     renderParticipants();
 
     for (const name of ["Алиса", "Боб", "Вася", "Галя"]) {
@@ -241,8 +221,9 @@ describe("Participants page", () => {
     }
   });
 
-  it("подставляет сохранённое имя чёрных при обратном порядке выбора пары", async () => {
-    seedParticipants({
+  it("fills the saved black team name when the pair is selected in reverse order", async () => {
+    seedStorage({
+      players: FIVE_PLAYERS,
       teamMode: true,
       teams: [
         { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
@@ -252,7 +233,7 @@ describe("Participants page", () => {
     const user = userEvent.setup();
     renderParticipants();
 
-    // Вася раньше Алисы → чёрные всё ещё p3+p1, но порядок кликов обратный.
+    // Vasya before Alisa: black is still p3+p1, but the click order is reversed.
     await user.click(checkboxFor("Вася"));
     await user.click(checkboxFor("Боб"));
     await user.click(checkboxFor("Алиса"));
@@ -271,9 +252,7 @@ describe("Participants page", () => {
     ).toHaveValue("Новички");
 
     await waitFor(() => {
-      const storedTeams = JSON.parse(
-        localStorage.getItem("teams") ?? "[]",
-      ) as Team[];
+      const storedTeams = readTeams();
       expect(
         storedTeams.filter(
           (team) => team.playerIds[0] === "p1" && team.playerIds[1] === "p3",
@@ -283,15 +262,16 @@ describe("Participants page", () => {
     });
   });
 
-  it("находит ту же команду, если сохранённая пара стала красными", async () => {
-    seedParticipants({
+  it("reuses the saved team when that pair is seated as red", async () => {
+    seedStorage({
+      players: FIVE_PLAYERS,
       teamMode: true,
       teams: [{ id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] }],
     });
     const user = userEvent.setup();
     renderParticipants();
 
-    // №1 Боб, №2 Вася, №3 Галя, №4 Алиса → красные = Вася+Алиса (p3+p1).
+    // 1 Bob, 2 Vasya, 3 Galya, 4 Alisa → red = Vasya+Alisa (p3+p1).
     await user.click(checkboxFor("Боб"));
     await user.click(checkboxFor("Вася"));
     await user.click(checkboxFor("Галя"));
@@ -309,8 +289,8 @@ describe("Participants page", () => {
     });
   });
 
-  it("удаление невыбранного игрока открывает диалог без предупреждения о выборе и удаляет только его", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2"] });
+  it("opens a dialog without a selection warning when deleting an unselected player and removes only that player", async () => {
+    seedStorage({ players: FIVE_PLAYERS, selectedPlayerIds: ["p1", "p2"] });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -334,8 +314,11 @@ describe("Participants page", () => {
     });
   });
 
-  it("удаление выбранного игрока без активной игры показывает предупреждение и убирает его из выбора", async () => {
-    seedParticipants({ selectedPlayerIds: ["p1", "p2", "p3"] });
+  it("warns and removes a selected player from the selection when the session is not committed", async () => {
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1", "p2", "p3"],
+    });
     const user = userEvent.setup();
     renderParticipants();
 
@@ -355,8 +338,40 @@ describe("Participants page", () => {
     });
   });
 
-  it("удаление выбранного игрока при активной сессии предупреждает о сбросе игры и сбрасывает currentGame", async () => {
-    seedParticipants({
+  it("warns that the current game will be reset and resets currentGame when deleting a selected player from a committed session", async () => {
+    seedStorage({
+      players: FIVE_PLAYERS,
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      teams: [
+        { id: "t1", name: "Чёрные", playerIds: ["p1", "p3"] },
+        { id: "t2", name: "Красные", playerIds: ["p2", "p4"] },
+      ],
+      currentTeamIds: { black: "t1", red: "t2" },
+      gameStarted: false,
+    });
+    const user = userEvent.setup();
+    renderParticipants();
+
+    await user.click(screen.getByRole("button", { name: "Удалить Боб" }));
+
+    expect(
+      await screen.findByText(
+        /Вы удаляете выбранного игрока — текущая игра будет сброшена\./,
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Удалить" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Боб")).not.toBeInTheDocument();
+      expect(readCurrentGame()).toEqual(defaultCurrentGame());
+    });
+  });
+
+  it("redirects to the game when it has already started and does not reset the session", async () => {
+    seedStorage({
+      players: FIVE_PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
       teams: [
@@ -369,26 +384,20 @@ describe("Participants page", () => {
       dealerId: "p1",
       scores: { p1: 4, p2: 2 },
     });
-    const user = userEvent.setup();
     renderParticipants();
 
-    await user.click(screen.getByRole("button", { name: "Удалить Алиса" }));
-
+    expect(await screen.findByRole("heading", { name: "Игра" })).toBeInTheDocument();
     expect(
-      await screen.findByText(
-        /Вы удаляете выбранного игрока — текущая игра будет сброшена\./,
-      ),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Удалить" }));
-
-    await waitFor(() => {
-      expect(screen.queryByText("Алиса")).not.toBeInTheDocument();
-      expect(readCurrentGame()).toEqual(defaultCurrentGame());
-      const storedPlayers = JSON.parse(
-        localStorage.getItem("players") ?? "[]",
-      ) as typeof FIVE_PLAYERS;
-      expect(storedPlayers.map((p) => p.id)).toEqual(["p2", "p3", "p4", "p5"]);
+      screen.queryByRole("heading", { name: "Выберите участников" }),
+    ).not.toBeInTheDocument();
+    expect(readCurrentGame()).toEqual({
+      selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      teamMode: true,
+      gameStarted: true,
+      currentTeamIds: { black: "t1", red: "t2" },
+      trump: "пики",
+      dealerId: "p1",
+      scores: { p1: 4, p2: 2 },
     });
   });
 });

@@ -3,13 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import {
-  CURRENT_GAME_STORAGE_KEY,
-  type CurrentGame,
-} from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
 import GameStart from "@/pages/GameStart";
 import Teams from "@/pages/Teams";
+import {
+  readCurrentGame,
+  readTeams,
+  seedStorage,
+  type SeedStorageOptions,
+} from "@/test/storage";
 
 const PLAYERS = [
   { id: "p1", name: "Алиса" },
@@ -23,38 +25,13 @@ const DEFAULT_CATALOG_TEAMS: Team[] = [
   { id: "t-red", name: "Боб + Галя", playerIds: ["p2", "p4"] },
 ];
 
-function seedTeams({
-  selectedPlayerIds = PLAYERS.map(({ id }) => id),
-  teams = DEFAULT_CATALOG_TEAMS,
-  currentTeamIds = { black: "t-black" as string | null, red: "t-red" as string | null },
-  teamMode = true,
-} = {}) {
-  localStorage.setItem("players", JSON.stringify(PLAYERS));
-  localStorage.setItem("teams", JSON.stringify(teams));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds,
-      teamMode,
-      gameStarted: false,
-      currentTeamIds,
-      trump: null,
-      dealerId: null,
-      scores: {},
-    } satisfies CurrentGame),
-  );
-}
-
-function readTeams(): Team[] {
-  return JSON.parse(localStorage.getItem("teams") ?? "[]") as Team[];
-}
-
-function readCurrentTeamIds(): { black: string | null; red: string | null } {
-  const game = JSON.parse(
-    localStorage.getItem(CURRENT_GAME_STORAGE_KEY) ?? "{}",
-  ) as Partial<CurrentGame>;
-  return game.currentTeamIds ?? { black: null, red: null };
-}
+const teamsPageStorage = {
+  players: PLAYERS,
+  selectedPlayerIds: PLAYERS.map(({ id }) => id),
+  teams: DEFAULT_CATALOG_TEAMS,
+  teamMode: true,
+  currentTeamIds: { black: "t-black", red: "t-red" },
+} satisfies SeedStorageOptions;
 
 function renderTeams() {
   return render(
@@ -71,8 +48,8 @@ function renderTeams() {
 }
 
 describe("Teams page", () => {
-  it("распределяет игроков, предзаполняет и сохраняет названия по умолчанию", async () => {
-    seedTeams();
+  it("assigns players, prefills default names, and saves them", async () => {
+    seedStorage(teamsPageStorage);
     renderTeams();
 
     expect(
@@ -100,14 +77,14 @@ describe("Teams page", () => {
           }),
         ]),
       );
-      const current = readCurrentTeamIds();
+      const current = readCurrentGame().currentTeamIds;
       expect(current.black).toBeTruthy();
       expect(current.red).toBeTruthy();
     });
   });
 
-  it("показывает ошибки и invalid-состояния для обоих коротких названий", async () => {
-    seedTeams();
+  it("shows errors and invalid state for both short names", async () => {
+    seedStorage(teamsPageStorage);
     const user = userEvent.setup();
     renderTeams();
 
@@ -144,8 +121,8 @@ describe("Teams page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("сохраняет введённые названия и переходит к подготовке игры", async () => {
-    seedTeams();
+  it("saves entered names and continues to game setup", async () => {
+    seedStorage(teamsPageStorage);
     const user = userEvent.setup();
     renderTeams();
 
@@ -182,8 +159,9 @@ describe("Teams page", () => {
     });
   });
 
-  it("подставляет сохранённое имя для уже известного состава", async () => {
-    seedTeams({
+  it("fills the saved name for an already known lineup", async () => {
+    seedStorage({
+      ...teamsPageStorage,
       teams: [
         { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
         { id: "t2", name: "Новички", playerIds: ["p2", "p4"] },
@@ -204,9 +182,10 @@ describe("Teams page", () => {
     ).toHaveValue("Новички");
   });
 
-  it("узнаёт состав независимо от порядка выбора игроков", async () => {
-    // Тот же состав чёрных (p1, p3), но выбран в другом порядке — p3 первым.
-    seedTeams({
+  it("recognizes a lineup regardless of player selection order", async () => {
+    // Same black lineup (p1, p3), selected in a different order — p3 first.
+    seedStorage({
+      ...teamsPageStorage,
       selectedPlayerIds: ["p3", "p2", "p1", "p4"],
       teams: [
         { id: "t1", name: "Старая гвардия", playerIds: ["p1", "p3"] },
@@ -223,8 +202,9 @@ describe("Teams page", () => {
     ).toHaveValue("Старая гвардия");
   });
 
-  it("перенаправляет на выбор участников, если игроков недостаточно", async () => {
-    seedTeams({
+  it("redirects to participant selection when there are not enough players", async () => {
+    seedStorage({
+      ...teamsPageStorage,
       selectedPlayerIds: ["p1", "p2", "p3"],
       currentTeamIds: { black: null, red: null },
     });
@@ -239,8 +219,9 @@ describe("Teams page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("перенаправляет на выбор участников без командного режима", async () => {
-    seedTeams({
+  it("redirects to participant selection when team mode is off", async () => {
+    seedStorage({
+      ...teamsPageStorage,
       teamMode: false,
       currentTeamIds: { black: null, red: null },
     });
@@ -254,8 +235,11 @@ describe("Teams page", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("перенаправляет на выбор участников, если команды не заданы", async () => {
-    seedTeams({ currentTeamIds: { black: null, red: null } });
+  it("redirects to participant selection when teams are not set", async () => {
+    seedStorage({
+      ...teamsPageStorage,
+      currentTeamIds: { black: null, red: null },
+    });
     renderTeams();
 
     expect(

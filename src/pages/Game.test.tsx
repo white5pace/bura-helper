@@ -3,13 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import { ParticipantsProvider } from "@/contexts/ParticipantsContext";
-import {
-  CURRENT_GAME_STORAGE_KEY,
-  type CurrentGame,
-  type TrumpSuit,
-} from "@/lib/currentGameStorage";
 import type { Team } from "@/lib/teamPair";
 import Game from "@/pages/Game";
+import { readCurrentGame, seedStorage } from "@/test/storage";
 
 const PLAYERS = [
   { id: "p1", name: "Алиса" },
@@ -22,39 +18,6 @@ const TEAMS: Team[] = [
   { id: "t1", name: "Чёрная гвардия", playerIds: ["p1", "p3"] },
   { id: "t2", name: "Красная стрела", playerIds: ["p2", "p4"] },
 ];
-
-function seedGame({
-  players = PLAYERS,
-  teams = [] as Team[],
-  selectedPlayerIds = ["p1", "p2"],
-  teamMode = false,
-  gameStarted = true,
-  currentTeamIds = { black: null, red: null } as CurrentGame["currentTeamIds"],
-  trump = "пики" as TrumpSuit | null,
-  dealerId = "p1" as string | null,
-  scores = {} as Record<string, number>,
-} = {}) {
-  localStorage.setItem("players", JSON.stringify(players));
-  localStorage.setItem("teams", JSON.stringify(teams));
-  localStorage.setItem(
-    CURRENT_GAME_STORAGE_KEY,
-    JSON.stringify({
-      selectedPlayerIds,
-      teamMode,
-      gameStarted,
-      currentTeamIds,
-      trump,
-      dealerId,
-      scores,
-    } satisfies CurrentGame),
-  );
-}
-
-function readCurrentGame(): CurrentGame {
-  return JSON.parse(
-    localStorage.getItem(CURRENT_GAME_STORAGE_KEY)!,
-  ) as CurrentGame;
-}
 
 function renderGame() {
   return render(
@@ -70,19 +33,12 @@ function renderGame() {
   );
 }
 
-function getSeatWrapper(playerName: string): HTMLElement {
-  const nameEl = screen.getByText(playerName);
-  const wrapper = nameEl.closest("div.absolute");
-  if (!(wrapper instanceof HTMLElement)) {
-    throw new Error(`Seat wrapper not found for ${playerName}`);
-  }
-  return wrapper;
-}
-
 describe("Game page", () => {
   it("renders trump icon, player names, scores (with 0 fallback) and no team block in regular mode", () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2"],
+      gameStarted: true,
       trump: "пики",
       dealerId: "p2",
       scores: { p1: 12 },
@@ -93,8 +49,8 @@ describe("Game page", () => {
     expect(screen.getByText("Алиса")).toBeInTheDocument();
     expect(screen.getByText("Боб")).toBeInTheDocument();
 
-    const aliceSeat = getSeatWrapper("Алиса");
-    const bobSeat = getSeatWrapper("Боб");
+    const aliceSeat = screen.getByTestId("seat-p1");
+    const bobSeat = screen.getByTestId("seat-p2");
 
     expect(within(aliceSeat).getByText("12")).toBeInTheDocument();
     expect(within(bobSeat).getByText("0")).toBeInTheDocument();
@@ -102,8 +58,11 @@ describe("Game page", () => {
   });
 
   it("renders dealer icon exactly once inside the dealer player card", () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      gameStarted: true,
+      trump: "пики",
       dealerId: "p3",
       scores: { p1: 4, p2: 2, p3: 6, p4: 0 },
     });
@@ -112,14 +71,14 @@ describe("Game page", () => {
     const dealerIcons = screen.getAllByRole("img", { name: "Раздает" });
     expect(dealerIcons).toHaveLength(1);
 
-    const dealerSeat = getSeatWrapper("Вася");
+    const dealerSeat = screen.getByTestId("seat-p3");
     expect(
       within(dealerSeat).getByRole("img", { name: "Раздает" }),
     ).toBeInTheDocument();
 
-    for (const otherName of ["Алиса", "Боб", "Галя"]) {
+    for (const otherId of ["p1", "p2", "p4"]) {
       expect(
-        within(getSeatWrapper(otherName)).queryByRole("img", {
+        within(screen.getByTestId(`seat-${otherId}`)).queryByRole("img", {
           name: "Раздает",
         }),
       ).not.toBeInTheDocument();
@@ -127,14 +86,17 @@ describe("Game page", () => {
   });
 
   it("seats 2 players in bottom-right and top-left (rotated) corners", () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2"],
+      gameStarted: true,
+      trump: "пики",
       dealerId: "p1",
     });
     renderGame();
 
-    const firstSeat = getSeatWrapper("Алиса");
-    const secondSeat = getSeatWrapper("Боб");
+    const firstSeat = screen.getByTestId("seat-p1");
+    const secondSeat = screen.getByTestId("seat-p2");
 
     expect(firstSeat.className).toContain("right-0");
     expect(firstSeat.className).toContain("bottom-0");
@@ -146,16 +108,19 @@ describe("Game page", () => {
   });
 
   it("seats 4 players with first two at bottom (not rotated) and 3rd/4th at top (rotated)", () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
+      gameStarted: true,
+      trump: "пики",
       dealerId: "p1",
     });
     renderGame();
 
-    const seat1 = getSeatWrapper("Алиса");
-    const seat2 = getSeatWrapper("Боб");
-    const seat3 = getSeatWrapper("Вася");
-    const seat4 = getSeatWrapper("Галя");
+    const seat1 = screen.getByTestId("seat-p1");
+    const seat2 = screen.getByTestId("seat-p2");
+    const seat3 = screen.getByTestId("seat-p3");
+    const seat4 = screen.getByTestId("seat-p4");
 
     expect(seat1.className).toContain("bottom-0");
     expect(seat1.className).toContain("right-0");
@@ -175,21 +140,24 @@ describe("Game page", () => {
   });
 
   it("renders team names and red team score styling in team mode", () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       teams: TEAMS,
       selectedPlayerIds: ["p1", "p2", "p3", "p4"],
       teamMode: true,
+      gameStarted: true,
       currentTeamIds: { black: "t1", red: "t2" },
+      trump: "пики",
       dealerId: "p1",
       scores: { p1: 3, p2: 5, p3: 7, p4: 9 },
     });
     renderGame();
 
-    for (const [name, scoreText] of [
-      ["Алиса", "3"],
-      ["Вася", "7"],
+    for (const [playerId, scoreText] of [
+      ["p1", "3"],
+      ["p3", "7"],
     ] as const) {
-      const seat = getSeatWrapper(name);
+      const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
       expect(within(seat).getByText("Чёрная гвардия")).toBeInTheDocument();
       expect(within(seat).getByText(scoreText).className).not.toContain(
@@ -197,11 +165,11 @@ describe("Game page", () => {
       );
     }
 
-    for (const [name, scoreText] of [
-      ["Боб", "5"],
-      ["Галя", "9"],
+    for (const [playerId, scoreText] of [
+      ["p2", "5"],
+      ["p4", "9"],
     ] as const) {
-      const seat = getSeatWrapper(name);
+      const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
       expect(within(seat).getByText("Красная стрела")).toBeInTheDocument();
       expect(within(seat).getByText(scoreText).className).toContain("text-team");
@@ -209,8 +177,11 @@ describe("Game page", () => {
   });
 
   it("opens round-end confirmation dialog, cancels back to /game, and navigates to /round-end on confirm", async () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2"],
+      gameStarted: true,
+      trump: "пики",
       dealerId: "p1",
     });
     const user = userEvent.setup();
@@ -238,7 +209,8 @@ describe("Game page", () => {
   });
 
   it("redirects silently to / when gameStarted is false without resetting selectedPlayerIds", async () => {
-    seedGame({
+    seedStorage({
+      players: PLAYERS,
       selectedPlayerIds: ["p1", "p2"],
       gameStarted: false,
       trump: null,
