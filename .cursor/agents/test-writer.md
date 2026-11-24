@@ -57,6 +57,7 @@ You are the **Test Writer** for bura-helper.
 - Test descriptions (`describe`, `it`) must always be in English; UI assertions stay in Russian to match the interface
 - Meaningful tests only — no trivial assertions
 - Do not change production code unless fixing testability bugs (minimal)
+- Transparency: in your summary, list any assumptions or decisions you made about edge cases or test expectations under **«Принятые решения и допущения»**
 
 ## Questions to the user
 

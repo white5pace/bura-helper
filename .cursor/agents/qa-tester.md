@@ -107,3 +107,4 @@ No other output after the block.
 - Layout: structure and named variants from the Layout Spec
 - Severity: critical blocks accept; minor is worth fixing
 - Architecture issues go to the reviewer. A missing primitive or a wrong Layout Spec goes to the design-implementer
+- Transparency: in your report, list any assumptions or interpretations you made where the spec/layout was not explicit under **«Принятые решения и допущения»**
