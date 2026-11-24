@@ -4,14 +4,15 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import {
   defaultCurrentGame,
   loadCurrentGame,
-  sanitizeCurrentGame,
   saveCurrentGame,
+  validateCurrentGameCatalogs,
   type CurrentTeamIds,
   type TrumpSuit,
 } from "@/lib/currentGameStorage";
@@ -29,7 +30,7 @@ import { loadTeams, saveTeams } from "@/lib/teamStorage";
 export type { CurrentTeamIds, Player, Team };
 
 function loadSession(players: Player[], teams: Team[]) {
-  return sanitizeCurrentGame(loadCurrentGame(), {
+  return validateCurrentGameCatalogs(loadCurrentGame(), {
     playerIds: new Set(players.map((player) => player.id)),
     teamIds: new Set(teams.map((team) => team.id)),
   });
@@ -43,6 +44,9 @@ interface ParticipantsContextValue {
   currentTeamIds: CurrentTeamIds;
   trump: TrumpSuit | null;
   dealerId: string | null;
+  scores: Record<string, number>;
+  gameStarted: boolean;
+  hasCommittedSession: boolean;
   resetGame: () => void;
   startGame: (round: { trump: TrumpSuit; dealerId: string }) => void;
   setTeamMode: (enabled: boolean) => void;
@@ -122,62 +126,105 @@ function useSyncedSession(players: Player[], teams: Team[]) {
   const [selectedPlayerIds, setSelectedPlayerIds] = useState(
     initial.selectedPlayerIds,
   );
-  const [teamMode, setTeamMode] = useState(initial.teamMode);
+  const [teamMode, setTeamModeState] = useState(initial.teamMode);
   const [currentTeamIds, setCurrentTeamIds] = useState(
     initial.currentTeamIds,
   );
   const [trump, setTrump] = useState(initial.trump);
   const [dealerId, setDealerId] = useState(initial.dealerId);
+  const [scores, setScores] = useState(initial.scores);
+  const [gameStarted, setGameStarted] = useState(initial.gameStarted);
+  const selectedPlayerIdsRef = useRef(selectedPlayerIds);
+  const teamModeRef = useRef(teamMode);
 
   useEffect(() => {
     saveCurrentGame({
       selectedPlayerIds,
       teamMode,
+      gameStarted,
       currentTeamIds,
       trump,
       dealerId,
+      scores,
     });
-  }, [selectedPlayerIds, teamMode, currentTeamIds, trump, dealerId]);
+  }, [
+    selectedPlayerIds,
+    teamMode,
+    gameStarted,
+    currentTeamIds,
+    trump,
+    dealerId,
+    scores,
+  ]);
 
-  const setPlayerSelected = useCallback((id: string, selected: boolean) => {
-    setSelectedPlayerIds((prev) => {
+  const setPlayerSelected = useCallback(
+    (id: string, selected: boolean) => {
+      const prev = selectedPlayerIdsRef.current;
       if (selected) {
         if (prev.includes(id) || prev.length >= TEAM_MODE_PLAYER_COUNT) {
-          return prev;
+          return;
         }
-        return [...prev, id];
+      } else if (!prev.includes(id)) {
+        return;
       }
-      return prev.filter((playerId) => playerId !== id);
-    });
+
+      const next = selected
+        ? [...prev, id]
+        : prev.filter((playerId) => playerId !== id);
+      selectedPlayerIdsRef.current = next;
+      setSelectedPlayerIds(next);
+      setCurrentTeamIds(EMPTY_CURRENT_TEAM_IDS);
+    },
+    [],
+  );
+
+  const setTeamMode = useCallback((enabled: boolean) => {
+    if (teamModeRef.current === enabled) {
+      return;
+    }
+    teamModeRef.current = enabled;
+    setTeamModeState(enabled);
+    setCurrentTeamIds(EMPTY_CURRENT_TEAM_IDS);
   }, []);
 
   const resetGame = useCallback(() => {
     const empty = defaultCurrentGame();
+    selectedPlayerIdsRef.current = empty.selectedPlayerIds;
+    teamModeRef.current = empty.teamMode;
     setSelectedPlayerIds(empty.selectedPlayerIds);
-    setTeamMode(empty.teamMode);
+    setTeamModeState(empty.teamMode);
     setCurrentTeamIds(empty.currentTeamIds);
     setTrump(empty.trump);
     setDealerId(empty.dealerId);
+    setScores(empty.scores);
+    setGameStarted(empty.gameStarted);
   }, []);
 
   const startGame = useCallback(
     (round: { trump: TrumpSuit; dealerId: string }) => {
       setTrump(round.trump);
       setDealerId(round.dealerId);
+      setGameStarted(true);
     },
     [],
   );
 
+  const hasCommittedSession =
+    gameStarted ||
+    currentTeamIds.black !== null ||
+    currentTeamIds.red !== null;
+
   return {
     selectedPlayerIds,
-    setSelectedPlayerIds,
     teamMode,
     setTeamMode,
     currentTeamIds,
     setCurrentTeamIds,
     trump,
     dealerId,
-    setDealerId,
+    scores,
+    gameStarted,
+    hasCommittedSession,
     setPlayerSelected,
     resetGame,
     startGame,
@@ -189,14 +236,15 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
   const { teams, setTeams, setTeamName, getTeamById } = useSyncedTeams();
   const {
     selectedPlayerIds,
-    setSelectedPlayerIds,
     teamMode,
     setTeamMode,
     currentTeamIds,
     setCurrentTeamIds,
     trump,
     dealerId,
-    setDealerId,
+    scores,
+    gameStarted,
+    hasCommittedSession,
     setPlayerSelected,
     resetGame,
     startGame,
@@ -244,17 +292,20 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
   const deletePlayer = useCallback(
     (playerId: string) => {
       setPlayers((prev) => prev.filter((player) => player.id !== playerId));
-      setSelectedPlayerIds((prev) =>
-        prev.filter((selectedId) => selectedId !== playerId),
-      );
-      if (dealerId === playerId) {
-        setDealerId(null);
-      }
 
       const next = removePlayerFromCatalogs(teams, currentTeamIds, playerId);
       if (next.teams !== teams) {
         setTeams(next.teams);
       }
+
+      if (selectedPlayerIds.includes(playerId)) {
+        if (hasCommittedSession) {
+          resetGame();
+          return;
+        }
+        setPlayerSelected(playerId, false);
+      }
+
       if (!sameCurrentTeamIds(currentTeamIds, next.currentTeamIds)) {
         setCurrentTeamIds(next.currentTeamIds);
       }
@@ -262,10 +313,11 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
     [
       teams,
       currentTeamIds,
-      dealerId,
+      selectedPlayerIds,
+      hasCommittedSession,
+      resetGame,
+      setPlayerSelected,
       setPlayers,
-      setSelectedPlayerIds,
-      setDealerId,
       setTeams,
       setCurrentTeamIds,
     ],
@@ -280,6 +332,9 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       currentTeamIds,
       trump,
       dealerId,
+      scores,
+      gameStarted,
+      hasCommittedSession,
       resetGame,
       startGame,
       setTeamMode,
@@ -300,6 +355,9 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       currentTeamIds,
       trump,
       dealerId,
+      scores,
+      gameStarted,
+      hasCommittedSession,
       resetGame,
       startGame,
       setTeamMode,

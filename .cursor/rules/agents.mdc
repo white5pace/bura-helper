@@ -11,11 +11,13 @@ Sub-agents: `.cursor/agents/*.md`.
 
 ## Pipeline
 
-Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester
+Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test Writer → QA Tester → [Business Analyst]
+
+`qa-regression` в эту цепочку не входит. Его вызывают отдельно, когда нужно проверить, что изменение не сломало чужие экраны.
 
 Циклы исправлений: reviewer / test-writer / qa-tester → frontend-developer (или design-implementer) → повтор цепочки.
 
-После каждого субагента оркестратор останавливается: короткая выжимка и вопрос, можно ли продолжать. Следующий этап — только после явного согласия.
+После каждого субагента оркестратор останавливается: короткая выжимка и вопрос, можно ли продолжать. Следующий этап — только после явного согласия. Если после `reviewer` требуются дальнейшие правки кода и пользователь сам не оговорил коммит, оркестратор уточняет, нужно ли сначала зафиксировать текущие изменения в `git commit` (чтобы следующее ревью смотрело только новый дифф).
 
 Роли design-tester **нет**.
 
@@ -23,10 +25,16 @@ Team Lead → [Design Implementer] → Frontend Developer → Reviewer → Test 
 
 - Live Figma MCP — только Design Implementer, один page frame, один `get_design_context`
 - Все остальные роли — product spec + Layout Spec (`src/docs/layouts/`), **без Figma**
-- QA Tester сверяет и бизнес-логику, и компоновку по Layout Spec (не пиксели из Figma)
+- QA Tester сверяет текущую задачу: поведение со спекой, компоновку с Layout Spec (не пиксели из Figma), в браузере
+- `qa-regression` — по запросу. Смотрит вне скоупа задачи: рефакторинг и общие куски не сломали другие экраны. Тоже открывает браузер
+- Reviewer проверочных команд (`lint`, `tsc`, тесты, сборка) не запускает и браузер не открывает, но может вызывать read-only `git` команды (`git status`, `git diff`, `git show`) для чтения диффа. `frontend-coder` может `npm run dev` только чтобы прочитать лог ошибок, и `npm test`
 - Новые UI-примитивы: `npx shadcn@latest add <component>`
 - Task packet: `src/docs/task-packet.template.md` → `src/docs/tasks/current.md`
 - Запуск: «Используй skill team-orchestrator»
+- Вопрос субагента приходит блоком `## Нужно уточнение`. Основной агент задаёт его пользователю и возобновляет того же субагента с ответом. Сам за субагента не отвечает
+- Субагенты никогда не делают `git commit` и не предлагают коммитить; предложить сделать коммит может только оркестратор после `reviewer`
+- Новые тесты и переписывание логики существующих (не сломанных) тестов делает только `test-writer`; другие субагенты при необходимости лишь сообщают оркестратору, что тесты стоит обновить
+- Названия и описания тестов (`describe`, `it`) всегда пишутся на английском языке
 
 ## Стек (кратко)
 

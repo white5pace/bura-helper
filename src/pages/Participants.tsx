@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/toast";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { type Player, useParticipants } from "@/contexts/ParticipantsContext";
-import { TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
+import { MIN_PLAYER_COUNT, TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 import DeleteConfirmDialog from "@/shared/ui/DeleteConfirmDialog";
@@ -77,6 +77,7 @@ function Participants() {
     players,
     selectedPlayerIds,
     teamMode,
+    hasCommittedSession,
     setTeamMode,
     setPlayerSelected,
     getPlayerById,
@@ -99,11 +100,22 @@ function Participants() {
       return { title: "", description: "" };
     }
 
+    const description = [
+      `Вы уверены, что хотите удалить игрока «${player.name}»? Вместе с ним будут удалены все команды, в которых он состоит.`,
+    ];
+    if (selectedPlayerIds.includes(deletePlayerId)) {
+      description.push(
+        hasCommittedSession
+          ? "Вы удаляете выбранного игрока — текущая игра будет сброшена."
+          : "Вы удаляете выбранного игрока — он будет убран из текущего выбора.",
+      );
+    }
+
     return {
       title: "Удалить игрока?",
-      description: `Вы уверены, что хотите удалить игрока «${player.name}»? Вместе с ним будут удалены все команды, в которых он состоит.`,
+      description: description.join("\n"),
     };
-  }, [deletePlayerId, getPlayerById]);
+  }, [deletePlayerId, getPlayerById, hasCommittedSession, selectedPlayerIds]);
 
   const handleConfirmDelete = () => {
     if (!deletePlayerId) {
@@ -124,10 +136,16 @@ function Participants() {
     }
 
     if (teamMode) {
-      if (!commitTeamSelection()) {
-        return;
-      }
+      commitTeamSelection();
       navigate("/teams");
+      return;
+    }
+
+    if (selectedPlayerIds.length < MIN_PLAYER_COUNT) {
+      toast.add({
+        type: "error",
+        title: "Выберите минимум двух игроков",
+      });
       return;
     }
 
