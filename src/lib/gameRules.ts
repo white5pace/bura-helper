@@ -9,19 +9,9 @@ export type TrumpSuit = (typeof TRUMP_SUITS)[number];
 export const GAME_END_SCORE = 12;
 
 export type RoundScoreUpdate = {
-  playerIds: readonly string[];
+  id: string;
   points: number;
 };
-
-export function participantScore(
-  scores: Record<string, number>,
-  playerIds: readonly string[],
-): number {
-  return playerIds.reduce((highest, playerId) => {
-    const score = scores[playerId] ?? 0;
-    return score > highest ? score : highest;
-  }, 0);
-}
 
 export function scoresAfterRound(
   scores: Record<string, number>,
@@ -30,14 +20,7 @@ export function scoresAfterRound(
   const next = { ...scores };
 
   for (const update of updates) {
-    if (!Number.isFinite(update.points)) {
-      continue;
-    }
-
-    const total = participantScore(scores, update.playerIds) + update.points;
-    for (const playerId of update.playerIds) {
-      next[playerId] = total;
-    }
+    next[update.id] = (scores[update.id] ?? 0) + update.points;
   }
 
   return next;

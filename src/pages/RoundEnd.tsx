@@ -10,7 +10,6 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useParticipants } from "@/contexts/ParticipantsContext";
 import {
   GAME_END_SCORE,
-  participantScore,
   TRUMP_SUITS,
   type TrumpSuit,
 } from "@/lib/gameRules";
@@ -53,7 +52,6 @@ const penaltiesSchema = z
 type PenaltyRow = {
   id: string;
   name: string;
-  playerIds: readonly string[];
   current: number;
 };
 
@@ -144,12 +142,10 @@ function RoundEnd() {
         if (!player) {
           throw new Error("Не найден игрок текущей партии");
         }
-        const playerIds = [player.id];
         return {
           id: player.id,
           name: player.name,
-          playerIds,
-          current: participantScore(scores, playerIds),
+          current: scores[player.id] ?? 0,
         } satisfies PenaltyRow;
       });
     }
@@ -165,8 +161,7 @@ function RoundEnd() {
       return {
         id: team.id,
         name: team.name,
-        playerIds: team.playerIds,
-        current: participantScore(scores, team.playerIds),
+        current: scores[team.id] ?? 0,
       } satisfies PenaltyRow;
     });
   }, [
@@ -232,7 +227,7 @@ function RoundEnd() {
     finishRound({
       trump: data.trump,
       penalties: rows.map((row) => ({
-        playerIds: row.playerIds,
+        id: row.id,
         points: selectedPenalty(data.penalties[row.id]),
       })),
     });

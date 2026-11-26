@@ -104,15 +104,6 @@ const currentGameSchema = z
           path: ["dealerId"],
         });
       }
-      for (const playerId of Object.keys(game.scores)) {
-        if (!selectedSet.has(playerId)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: "Счёт содержит неизвестного игрока",
-            path: ["scores", playerId],
-          });
-        }
-      }
       if (
         game.teamMode &&
         (game.selectedPlayerIds.length !== TEAM_MODE_PLAYER_COUNT ||

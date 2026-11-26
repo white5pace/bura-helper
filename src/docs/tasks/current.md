@@ -7,7 +7,9 @@
 
 **Type:** feature
 
-**Текущая итерация:** 1 (из 2)
+**Текущая итерация:** 2 (из 2)
+
+**Итерация 1:** закрыта. Радиокнопки штрафных, счёт стороны, подсветка `>= 12`, козырь, «Продолжить» и «Закончить».
 
 > **Важно для всех агентов:** задача разбита на 2 итерации начиная с `frontend-developer`.
 > - **`design-implementer`** сразу проектирует и верстает **полный** Layout Spec и компоненты для **обоих** режимов заполнения штрафных очков (и радиокнопки, и переключатель режима на `input[type="number"]`).
@@ -59,7 +61,7 @@
 **Route:** `/round-end`
 
 **Figma:** `https://www.figma.com/design/yDMDsQFFgfIk4fIlAKVJEE/Bura-helper?node-id=672-1585&t=SVAUn0eWov9dkrNE-4`  
-**Layout:** `pending` (ожидается `src/docs/layouts/round-end.md`)
+**Layout:** `src/docs/layouts/round-end.md`
 
 **Code refs:** `src/App.tsx`, `src/pages/Game.tsx`, `src/pages/GameStart.tsx`, `src/contexts/ParticipantsContext.tsx`, `src/lib/currentGameStorage.ts`, `src/lib/gameRules.ts`, `src/shared/ui/PageLayout.tsx`
 
@@ -73,7 +75,7 @@
 
 **Sub-agents:** design-implementer → frontend-developer → reviewer → test-writer → qa-tester
 
-**Status:** pending
+**Status:** итерация 1 закрыта, в работе итерация 2
 
 ---
 

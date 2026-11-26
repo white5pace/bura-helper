@@ -351,7 +351,7 @@ describe("ParticipantsContext", () => {
       gameStarted: true,
       trump: "черви",
       dealerId: "p1",
-      scores: { p1: 4, p2: 2 },
+      scores: { t1: 4, t2: 2 },
     });
     const { result } = renderHook(() => useParticipants(), { wrapper });
 
@@ -365,7 +365,7 @@ describe("ParticipantsContext", () => {
     expect(result.current.gameStarted).toBe(true);
     expect(result.current.selectedPlayerIds).toEqual(["p1", "p2", "p3", "p4"]);
     expect(result.current.currentTeamIds).toEqual({ black: "t1", red: "t2" });
-    expect(result.current.scores).toEqual({ p1: 4, p2: 2 });
+    expect(result.current.scores).toEqual({ t1: 4, t2: 2 });
 
     act(() => {
       result.current.deletePlayer("p2");
