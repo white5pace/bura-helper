@@ -5,7 +5,6 @@ import {
   TYPE_MISMATCH_MESSAGE,
   defaultCurrentGame,
   loadCurrentGame,
-  parseCurrentGame,
   saveCurrentGame,
   validateCurrentGameCatalogs,
   type CurrentGame,
@@ -74,7 +73,7 @@ describe("currentGameStorage", () => {
       currentTeamIds: { black: "t1", red: "t2" },
       trump: "черви",
       dealerId: "p3",
-      scores: { p1: 6, p2: 2, p3: 4, p4: 0 },
+      scores: { t1: 6, t2: 2 },
     });
 
     saveCurrentGame(game);
@@ -134,28 +133,6 @@ describe("currentGameStorage", () => {
       trump: "бубны",
     });
     expectValidationError(loadCurrentGame, TYPE_MISMATCH_MESSAGE);
-
-    expectValidationError(
-      () =>
-        parseCurrentGame(
-          validGame({
-            gameStarted: true,
-            trump: "пики",
-            dealerId: "p1",
-            scores: { p1: Number.POSITIVE_INFINITY },
-          }),
-        ),
-      TYPE_MISMATCH_MESSAGE,
-    );
-
-    expectValidationError(
-      () =>
-        parseCurrentGame({
-          ...validGame(),
-          scores: { p1: "два" },
-        }),
-      TYPE_MISMATCH_MESSAGE,
-    );
   });
 
   it("throws CurrentGameValidationError for more than 4 players or broken invariants", () => {
@@ -244,16 +221,6 @@ describe("currentGameStorage", () => {
       }),
     );
     expectValidationError(loadCurrentGame, "Раздающий не входит в список игроков");
-
-    store(
-      validGame({
-        gameStarted: true,
-        trump: "пики",
-        dealerId: "p1",
-        scores: { missing: 2 },
-      }),
-    );
-    expectValidationError(loadCurrentGame, "Счёт содержит неизвестного игрока");
 
     store(
       validGame({

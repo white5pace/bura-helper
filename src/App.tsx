@@ -7,6 +7,7 @@ import RequireStartedGame from "./layouts/RequireStartedGame";
 import SessionErrorBoundary from "./widgets/session-error-boundary/SessionErrorBoundary";
 import Game from "./pages/Game";
 import GameStart from "./pages/GameStart";
+import RoundEnd from "./pages/RoundEnd";
 import Home from "./pages/Home";
 import Participants from "./pages/Participants";
 import Player from "./pages/Player";
@@ -31,8 +32,7 @@ const router = createBrowserRouter([
         element: <RequireStartedGame />,
         children: [
           { path: "/game", element: <Game /> },
-          { path: "/round-end", element: <p>Завершение раунда</p> },
-          { path: "/game-end", element: <p>Завершение игры</p> },
+          { path: "/round-end", element: <RoundEnd /> },
         ],
       },
     ],

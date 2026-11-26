@@ -99,6 +99,7 @@ describe("Game page", () => {
       gameStarted: true,
       trump: "пики",
       dealerId: "p1",
+      scores: { p1: 4, p2: 2, p3: 6, p4: 0 },
     });
     renderGame();
 
@@ -106,6 +107,11 @@ describe("Game page", () => {
     const seat2 = screen.getByTestId("seat-p2");
     const seat3 = screen.getByTestId("seat-p3");
     const seat4 = screen.getByTestId("seat-p4");
+
+    expect(within(seat1).getByText("4")).toBeInTheDocument();
+    expect(within(seat2).getByText("2")).toBeInTheDocument();
+    expect(within(seat3).getByText("6")).toBeInTheDocument();
+    expect(within(seat4).getByText("0")).toBeInTheDocument();
 
     expect(seat1.className).toContain("bottom-0");
     expect(seat1.className).toContain("right-0");
@@ -134,31 +140,44 @@ describe("Game page", () => {
       currentTeamIds: { black: "t1", red: "t2" },
       trump: "пики",
       dealerId: "p1",
-      scores: { p1: 3, p2: 5, p3: 7, p4: 9 },
+      scores: { t1: 3, t2: 9 },
     });
     renderGame();
 
-    for (const [playerId, scoreText] of [
-      ["p1", "3"],
-      ["p3", "7"],
-    ] as const) {
+    for (const playerId of ["p1", "p3"]) {
       const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
       expect(within(seat).getByText("Старая гвардия")).toBeInTheDocument();
-      expect(within(seat).getByText(scoreText).className).not.toContain(
-        "text-team",
-      );
+      expect(within(seat).getByText("3").className).not.toContain("text-team");
     }
 
-    for (const [playerId, scoreText] of [
-      ["p2", "5"],
-      ["p4", "9"],
-    ] as const) {
+    for (const playerId of ["p2", "p4"]) {
       const seat = screen.getByTestId(`seat-${playerId}`);
       expect(within(seat).getByText("Команда:")).toBeInTheDocument();
       expect(within(seat).getByText("Новички")).toBeInTheDocument();
-      expect(within(seat).getByText(scoreText).className).toContain("text-team");
+      expect(within(seat).getByText("9").className).toContain("text-team");
     }
+
+    const seat1 = screen.getByTestId("seat-p1");
+    const seat2 = screen.getByTestId("seat-p2");
+    const seat3 = screen.getByTestId("seat-p3");
+    const seat4 = screen.getByTestId("seat-p4");
+
+    expect(seat1.className).toContain("bottom-0");
+    expect(seat1.className).toContain("right-0");
+    expect(seat1.className).not.toContain("rotate-180");
+
+    expect(seat2.className).toContain("bottom-0");
+    expect(seat2.className).toContain("left-0");
+    expect(seat2.className).not.toContain("rotate-180");
+
+    expect(seat3.className).toContain("top-0");
+    expect(seat3.className).toContain("left-0");
+    expect(seat3.className).toContain("rotate-180");
+
+    expect(seat4.className).toContain("top-0");
+    expect(seat4.className).toContain("right-0");
+    expect(seat4.className).toContain("rotate-180");
   });
 
   it("opens round-end confirmation dialog, cancels back to /game, and navigates to /round-end on confirm", async () => {

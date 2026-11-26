@@ -24,7 +24,12 @@ import {
 } from "@/lib/ensureTeamsForSelection";
 import { loadPlayers, savePlayers, type Player } from "@/lib/playerStorage";
 import { type Team } from "@/lib/teamPair";
-import { TEAM_MODE_PLAYER_COUNT } from "@/lib/gameRules";
+import {
+  TEAM_MODE_PLAYER_COUNT,
+  nextDealerId,
+  scoresAfterRound,
+  type RoundScoreUpdate,
+} from "@/lib/gameRules";
 import { loadTeams, saveTeams } from "@/lib/teamStorage";
 
 export type { CurrentTeamIds, Player, Team };
@@ -49,6 +54,10 @@ interface ParticipantsContextValue {
   hasCommittedSession: boolean;
   resetGame: () => void;
   startGame: (round: { trump: TrumpSuit; dealerId: string }) => void;
+  finishRound: (round: {
+    penalties: readonly RoundScoreUpdate[];
+    trump: TrumpSuit;
+  }) => void;
   setTeamMode: (enabled: boolean) => void;
   setTeamName: (teamId: string, name: string) => void;
   setPlayerSelected: (id: string, selected: boolean) => void;
@@ -209,6 +218,15 @@ function useSyncedSession(players: Player[], teams: Team[]) {
     [],
   );
 
+  const finishRound = useCallback(
+    (round: { penalties: readonly RoundScoreUpdate[]; trump: TrumpSuit }) => {
+      setScores((current) => scoresAfterRound(current, round.penalties));
+      setTrump(round.trump);
+      setDealerId((current) => nextDealerId(selectedPlayerIds, current));
+    },
+    [selectedPlayerIds],
+  );
+
   const hasCommittedSession =
     gameStarted ||
     currentTeamIds.black !== null ||
@@ -228,6 +246,7 @@ function useSyncedSession(players: Player[], teams: Team[]) {
     setPlayerSelected,
     resetGame,
     startGame,
+    finishRound,
   };
 }
 
@@ -248,6 +267,7 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
     setPlayerSelected,
     resetGame,
     startGame,
+    finishRound,
   } = useSyncedSession(players, teams);
 
   const getPlayerById = useCallback(
@@ -337,6 +357,7 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       hasCommittedSession,
       resetGame,
       startGame,
+      finishRound,
       setTeamMode,
       setTeamName,
       setPlayerSelected,
@@ -360,6 +381,7 @@ export function ParticipantsProvider({ children }: { children: ReactNode }) {
       hasCommittedSession,
       resetGame,
       startGame,
+      finishRound,
       setTeamMode,
       setTeamName,
       setPlayerSelected,

@@ -56,7 +56,9 @@ You are the **Test Writer** for bura-helper.
 - Mock localStorage in tests — do not touch real browser storage
 - Test descriptions (`describe`, `it`) must always be in English; UI assertions stay in Russian to match the interface
 - Meaningful tests only — no trivial assertions
+- Successful path from `.cursor/rules/project.mdc`. Cover logically different situations, not every variation of one situation. An empty value and an already filled value are different. Different amounts inside the same situation are not.
 - Do not change production code unless fixing testability bugs (minimal)
+- Transparency: in your summary, list any assumptions or decisions you made about edge cases or test expectations under **«Принятые решения и допущения»**
 
 ## Questions to the user
 

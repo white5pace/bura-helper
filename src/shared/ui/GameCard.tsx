@@ -39,11 +39,17 @@ export type GameCardTeamNames = {
   red: string | null;
 };
 
+export type GameCardTeamIds = {
+  black: string | null;
+  red: string | null;
+};
+
 export type GameCardProps = {
   trump: GameCardTrump;
   players: readonly GameCardPlayer[];
   teamMode: boolean;
   teamNames: GameCardTeamNames;
+  teamIds: GameCardTeamIds;
   scores: Record<string, number>;
   dealerId: string | null;
   className?: string;
@@ -54,6 +60,7 @@ function GameCard({
   players,
   teamMode,
   teamNames,
+  teamIds,
   scores,
   dealerId,
   className,
@@ -83,6 +90,10 @@ function GameCard({
         const teamName = teamMode
           ? ((isRedTeam ? teamNames.red : teamNames.black) ?? undefined)
           : undefined;
+        const teamId = isRedTeam ? teamIds.red : teamIds.black;
+        const score = teamMode
+          ? scores[teamId ?? ""] ?? 0
+          : (scores[player.id] ?? 0);
 
         return (
           <div
@@ -92,7 +103,7 @@ function GameCard({
           >
             <PlayerCard
               name={player.name}
-              score={scores[player.id] ?? 0}
+              score={score}
               variant={variant}
               align={corner.align}
               dealer={player.id === dealerId}

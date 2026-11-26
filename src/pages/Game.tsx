@@ -73,6 +73,7 @@ function Game() {
         players={players}
         teamMode={teamMode}
         teamNames={teamNames}
+        teamIds={currentTeamIds}
         scores={scores}
         dealerId={dealerId}
       />

@@ -109,3 +109,4 @@ Write the review in Russian. Be specific: file, what is wrong or merely unclear,
 - Report only. Do not edit code.
 - Only read-only `git` commands (`git status`, `git diff`, `git show`) are allowed; do not run lint, `tsc`, tests, build, dev server, or browser.
 - Do not restate the diff. State the judgment.
+- Transparency: if you made any assumptions or interpretations where the boundary/rules were not explicit, list them under **«Принятые решения и допущения»** in your report.

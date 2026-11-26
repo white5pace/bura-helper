@@ -3,31 +3,17 @@ import { useNavigate } from "react-router-dom";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import {
-  clubs,
-  dealer as dealerIcon,
-  diamonds,
-  hearts,
-  spades,
-} from "@/assets/icons";
+import { dealer as dealerIcon } from "@/assets/icons";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useParticipants } from "@/contexts/ParticipantsContext";
-import { TRUMP_SUITS, type TrumpSuit } from "@/lib/currentGameStorage";
+import { TRUMP_SUITS } from "@/lib/currentGameStorage";
 import { MIN_PLAYER_COUNT } from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
+import TrumpRadioGroup from "@/shared/ui/TrumpRadioGroup";
 
 const GAME_START_FORM_ID = "game-start-form";
-
-const SUIT_OPTIONS: { value: TrumpSuit; src: string; alt: string }[] = [
-  { value: "крести", src: clubs, alt: "крести" },
-  { value: "пики", src: spades, alt: "пики" },
-  { value: "черви", src: hearts, alt: "черви" },
-  { value: "буби", src: diamonds, alt: "буби" },
-];
 
 const formSchema = z.object({
   trump: z.enum(TRUMP_SUITS, {
@@ -112,24 +98,12 @@ function GameStart() {
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid} className="gap-3">
                 <FieldLabel>Козырь</FieldLabel>
-                <RadioGroup
+                <TrumpRadioGroup
                   name={field.name}
                   value={field.value}
-                  onValueChange={(value) => {
-                    field.onChange(value);
-                  }}
-                  className="flex w-auto flex-row items-center gap-4"
-                >
-                  {SUIT_OPTIONS.map((suit) => (
-                    <Label key={suit.value}>
-                      <RadioGroupItem
-                        value={suit.value}
-                        aria-invalid={fieldState.invalid}
-                      />
-                      <img src={suit.src} alt={suit.alt} className="shrink-0" />
-                    </Label>
-                  ))}
-                </RadioGroup>
+                  onValueChange={field.onChange}
+                  invalid={fieldState.invalid}
+                />
                 {fieldState.invalid && (
                   <FieldError errors={[fieldState.error]} />
                 )}
