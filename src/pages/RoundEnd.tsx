@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -8,8 +8,12 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useParticipants } from "@/contexts/ParticipantsContext";
-import { TRUMP_SUITS } from "@/lib/currentGameStorage";
-import { GAME_END_SCORE, participantScore } from "@/lib/gameRules";
+import {
+  GAME_END_SCORE,
+  participantScore,
+  TRUMP_SUITS,
+  type TrumpSuit,
+} from "@/lib/gameRules";
 import PageLayout from "@/shared/ui/PageLayout";
 import SecondHeader from "@/shared/ui/SecondHeader";
 import TrumpRadioGroup from "@/shared/ui/TrumpRadioGroup";
@@ -21,42 +25,41 @@ const PENALTY_OPTIONS = ["0", "2", "4", "6", "8", "12"] as const;
 const ONE_SIDE_PENALTY_MESSAGE =
   "Штрафные очки больше 0 можно указать только для одной стороны";
 
-function isChargedPenalty(value: string): boolean {
-  return value !== "" && value !== "0";
+function isTrumpSuit(value: string): value is TrumpSuit {
+  return TRUMP_SUITS.some((suit) => suit === value);
 }
 
-const formSchema = z.object({
-  penalties: z
-    .record(
-      z.string(),
-      z.enum(PENALTY_OPTIONS, {
-        errorMap: () => ({ message: "Выберите штрафные очки" }),
-      }),
-    )
-    .superRefine((penalties, ctx) => {
-      const charged = Object.values(penalties).filter((value) =>
-        isChargedPenalty(value),
-      );
-      if (charged.length > 1) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: ONE_SIDE_PENALTY_MESSAGE,
-          path: ["root"],
-        });
-      }
+const penaltiesSchema = z
+  .record(
+    z.string(),
+    z.enum(PENALTY_OPTIONS, {
+      errorMap: () => ({ message: "Выберите штрафные очки" }),
     }),
-  trump: z.enum(TRUMP_SUITS, {
-    errorMap: () => ({ message: "Выберите козырь" }),
-  }),
-});
+  )
+  .superRefine((penalties, ctx) => {
+    const chargedPenalty = Object.values(penalties).filter(
+      (value) => value !== "0",
+    );
 
-type FormValues = z.infer<typeof formSchema>;
+    if (chargedPenalty.length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: ONE_SIDE_PENALTY_MESSAGE,
+        path: ["root"],
+      });
+    }
+  });
 
 type PenaltyRow = {
   id: string;
   name: string;
   playerIds: readonly string[];
   current: number;
+};
+
+type FormValues = {
+  penalties: Record<string, (typeof PENALTY_OPTIONS)[number]>;
+  trump: string;
 };
 
 function selectedPenalty(value: string | undefined): number {
@@ -68,15 +71,57 @@ function rowTotal(current: number, value: string | undefined): number {
   return current + selectedPenalty(value);
 }
 
-function penaltyGroupMessage(
-  penalties:
-    | {
-        message?: string;
-        root?: { message?: string };
-      }
-    | undefined,
-): string | undefined {
-  return penalties?.root?.message ?? penalties?.message;
+function hasReachedGameEnd(
+  rows: readonly PenaltyRow[],
+  penalties: { readonly [id: string]: string | undefined } | undefined,
+): boolean {
+  return rows.some(
+    (row) => rowTotal(row.current, penalties?.[row.id]) >= GAME_END_SCORE,
+  );
+}
+
+function PenaltyRowField({
+  row,
+  control,
+}: {
+  row: PenaltyRow;
+  control: Control<FormValues>;
+}) {
+  return (
+    <Controller
+      name={`penalties.${row.id}`}
+      control={control}
+      render={({ field, fieldState }) => {
+        const total = rowTotal(row.current, field.value);
+        return (
+          <Field data-invalid={fieldState.invalid} className="gap-3">
+            <FieldLabel
+              className={total >= GAME_END_SCORE ? "text-team" : undefined}
+            >
+              {row.name} ({total})
+            </FieldLabel>
+            <RadioGroup
+              name={field.name}
+              value={field.value ?? ""}
+              onValueChange={field.onChange}
+              className="flex w-full flex-row items-center gap-4"
+            >
+              {PENALTY_OPTIONS.map((option) => (
+                <Label key={option} className="shrink-0">
+                  <RadioGroupItem
+                    value={option}
+                    aria-invalid={fieldState.invalid}
+                  />
+                  {option}
+                </Label>
+              ))}
+            </RadioGroup>
+            {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+          </Field>
+        );
+      }}
+    />
+  );
 }
 
 function RoundEnd() {
@@ -94,39 +139,35 @@ function RoundEnd() {
 
   const rows = useMemo(() => {
     if (!teamMode) {
-      return selectedPlayerIds.flatMap((playerId) => {
+      return selectedPlayerIds.map((playerId) => {
         const player = getPlayerById(playerId);
         if (!player) {
-          return [];
+          throw new Error("Не найден игрок текущей партии");
         }
         const playerIds = [player.id];
-        return [
-          {
-            id: player.id,
-            name: player.name,
-            playerIds,
-            current: participantScore(scores, playerIds),
-          } satisfies PenaltyRow,
-        ];
+        return {
+          id: player.id,
+          name: player.name,
+          playerIds,
+          current: participantScore(scores, playerIds),
+        } satisfies PenaltyRow;
       });
     }
 
-    return [currentTeamIds.black, currentTeamIds.red].flatMap((teamId) => {
+    return [currentTeamIds.black, currentTeamIds.red].map((teamId) => {
       if (!teamId) {
-        return [];
+        throw new Error("Не заданы команды текущей партии");
       }
       const team = getTeamById(teamId);
       if (!team) {
-        return [];
+        throw new Error("Не найдена команда текущей партии");
       }
-      return [
-        {
-          id: team.id,
-          name: team.name,
-          playerIds: team.playerIds,
-          current: participantScore(scores, team.playerIds),
-        } satisfies PenaltyRow,
-      ];
+      return {
+        id: team.id,
+        name: team.name,
+        playerIds: team.playerIds,
+        current: participantScore(scores, team.playerIds),
+      } satisfies PenaltyRow;
     });
   }, [
     teamMode,
@@ -137,13 +178,35 @@ function RoundEnd() {
     getTeamById,
   ]);
 
+  const formSchema = useMemo(
+    () =>
+      z
+        .object({
+          penalties: penaltiesSchema,
+          trump: z.string(),
+        })
+        .superRefine((data, ctx) => {
+          if (hasReachedGameEnd(rows, data.penalties)) {
+            return;
+          }
+          if (!isTrumpSuit(data.trump)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Выберите козырь",
+              path: ["trump"],
+            });
+          }
+        }),
+    [rows],
+  );
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       penalties: Object.fromEntries(
         rows.map((row) => [row.id, "0"]),
       ) as FormValues["penalties"],
-      trump: "" as FormValues["trump"],
+      trump: "",
     },
   });
 
@@ -152,19 +215,17 @@ function RoundEnd() {
     handleSubmit,
     formState: { errors },
   } = form;
-  
   const watchedPenalties = useWatch({ control, name: "penalties" });
-  const gameOver = rows.some(
-    (row) =>
-      rowTotal(row.current, watchedPenalties?.[row.id]) >= GAME_END_SCORE,
-  );
-  const groupMessage = penaltyGroupMessage(errors.penalties);
+  const gameOver = hasReachedGameEnd(rows, watchedPenalties);
 
-  const continueRound = (data: FormValues) => {
-    const reachedEnd = rows.some(
-      (row) => rowTotal(row.current, data.penalties[row.id]) >= GAME_END_SCORE,
-    );
-    if (reachedEnd) {
+  const onSubmit = (data: FormValues) => {
+    if (hasReachedGameEnd(rows, data.penalties)) {
+      resetGame();
+      navigate("/", { replace: true });
+      return;
+    }
+
+    if (!isTrumpSuit(data.trump)) {
       return;
     }
 
@@ -178,85 +239,31 @@ function RoundEnd() {
     navigate("/game", { replace: true });
   };
 
-  const endGame = () => {
-    resetGame();
-    navigate("/", { replace: true });
-  };
-
   return (
     <PageLayout
       footer={
-        gameOver ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={endGame}
-          >
-            Закончить
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            form={ROUND_END_FORM_ID}
-            variant="outline"
-            size="lg"
-            className="w-full"
-          >
-            Продолжить
-          </Button>
-        )
+        <Button
+          type="submit"
+          form={ROUND_END_FORM_ID}
+          variant="outline"
+          size="lg"
+          className="w-full"
+        >
+          {gameOver ? "Закончить" : "Продолжить"}
+        </Button>
       }
     >
       <SecondHeader>Штрафные очки за раунд</SecondHeader>
       <form
         id={ROUND_END_FORM_ID}
-        onSubmit={handleSubmit(continueRound)}
+        onSubmit={handleSubmit(onSubmit)}
         className="flex flex-1 flex-col gap-4 text-left"
       >
         {rows.map((row) => (
-          <Controller
-            key={row.id}
-            name={`penalties.${row.id}`}
-            control={control}
-            render={({ field, fieldState }) => {
-              const total = rowTotal(row.current, field.value);
-              return (
-                <Field data-invalid={fieldState.invalid} className="gap-3">
-                  <FieldLabel
-                    className={
-                      total >= GAME_END_SCORE ? "text-team" : undefined
-                    }
-                  >
-                    {row.name} ({total})
-                  </FieldLabel>
-                  <RadioGroup
-                    name={field.name}
-                    value={field.value ?? ""}
-                    onValueChange={field.onChange}
-                    className="flex w-full flex-row items-center gap-4"
-                  >
-                    {PENALTY_OPTIONS.map((option) => (
-                      <Label key={option} className="shrink-0">
-                        <RadioGroupItem
-                          value={option}
-                          aria-invalid={fieldState.invalid}
-                        />
-                        {option}
-                      </Label>
-                    ))}
-                  </RadioGroup>
-                  {fieldState.invalid && (
-                    <FieldError errors={[fieldState.error]} />
-                  )}
-                </Field>
-              );
-            }}
-          />
+          <PenaltyRowField key={row.id} row={row} control={control} />
         ))}
-        {groupMessage ? (
-          <FieldError errors={[{ message: groupMessage }]} />
+        {errors.penalties?.root?.message ? (
+          <FieldError errors={[{ message: errors.penalties.root.message }]} />
         ) : null}
         {gameOver ? null : (
           <Controller
