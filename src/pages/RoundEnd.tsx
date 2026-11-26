@@ -1,9 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Controller, useForm, useWatch, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { CopyCheck, SquarePen } from "lucide-react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -24,30 +26,60 @@ const PENALTY_OPTIONS = ["0", "2", "4", "6", "8", "12"] as const;
 const ONE_SIDE_PENALTY_MESSAGE =
   "Штрафные очки больше 0 можно указать только для одной стороны";
 
+const INTEGER_PENALTY_MESSAGE = "Введите целое число от 0";
+
+function penaltyPoints(value: string | number | undefined): number {
+  if (value === undefined || value === "") {
+    return 0;
+  }
+  return Number(value);
+}
+
+function rejectMultipleSides(ctx: z.RefinementCtx, chargedCount: number) {
+  if (chargedCount > 1) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: ONE_SIDE_PENALTY_MESSAGE,
+      path: ["root"],
+    });
+  }
+}
+
 function isTrumpSuit(value: string): value is TrumpSuit {
   return TRUMP_SUITS.some((suit) => suit === value);
 }
 
-const penaltiesSchema = z
-  .record(
-    z.string(),
-    z.enum(PENALTY_OPTIONS, {
-      errorMap: () => ({ message: "Выберите штрафные очки" }),
-    }),
-  )
-  .superRefine((penalties, ctx) => {
-    const chargedPenalty = Object.values(penalties).filter(
-      (value) => value !== "0",
-    );
+const numberPenaltySchema = z.coerce
+  .number({ invalid_type_error: INTEGER_PENALTY_MESSAGE })
+  .int(INTEGER_PENALTY_MESSAGE)
+  .nonnegative(INTEGER_PENALTY_MESSAGE);
 
-    if (chargedPenalty.length > 1) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: ONE_SIDE_PENALTY_MESSAGE,
-        path: ["root"],
+function penaltiesSchema(numberMode: boolean) {
+  if (numberMode) {
+    return z
+      .record(z.string(), numberPenaltySchema)
+      .superRefine((penalties, ctx) => {
+        rejectMultipleSides(
+          ctx,
+          Object.values(penalties).filter((value) => value > 0).length,
+        );
       });
-    }
-  });
+  }
+
+  return z
+    .record(
+      z.string(),
+      z.enum(PENALTY_OPTIONS, {
+        errorMap: () => ({ message: "Выберите штрафные очки" }),
+      }),
+    )
+    .superRefine((penalties, ctx) => {
+      rejectMultipleSides(
+        ctx,
+        Object.values(penalties).filter((value) => value !== "0").length,
+      );
+    });
+}
 
 type PenaltyRow = {
   id: string;
@@ -56,22 +88,19 @@ type PenaltyRow = {
 };
 
 type FormValues = {
-  penalties: Record<string, (typeof PENALTY_OPTIONS)[number]>;
+  penalties: Record<string, string>;
   trump: string;
 };
 
-function selectedPenalty(value: string | undefined): number {
-  const match = PENALTY_OPTIONS.find((option) => option === value);
-  return match === undefined ? 0 : Number(match);
-}
-
-function rowTotal(current: number, value: string | undefined): number {
-  return current + selectedPenalty(value);
+function rowTotal(current: number, value: string | number | undefined): number {
+  return current + penaltyPoints(value);
 }
 
 function hasReachedGameEnd(
   rows: readonly PenaltyRow[],
-  penalties: { readonly [id: string]: string | undefined } | undefined,
+  penalties:
+    | { readonly [id: string]: string | number | undefined }
+    | undefined,
 ): boolean {
   return rows.some(
     (row) => rowTotal(row.current, penalties?.[row.id]) >= GAME_END_SCORE,
@@ -81,9 +110,11 @@ function hasReachedGameEnd(
 function PenaltyRowField({
   row,
   control,
+  numberMode,
 }: {
   row: PenaltyRow;
   control: Control<FormValues>;
+  numberMode: boolean;
 }) {
   return (
     <Controller
@@ -98,22 +129,34 @@ function PenaltyRowField({
             >
               {row.name} ({total})
             </FieldLabel>
-            <RadioGroup
-              name={field.name}
-              value={field.value ?? ""}
-              onValueChange={field.onChange}
-              className="flex w-full flex-row items-center gap-4"
-            >
-              {PENALTY_OPTIONS.map((option) => (
-                <Label key={option} className="shrink-0">
-                  <RadioGroupItem
-                    value={option}
-                    aria-invalid={fieldState.invalid}
-                  />
-                  {option}
-                </Label>
-              ))}
-            </RadioGroup>
+            {numberMode ? (
+              <Input
+                type="number"
+                name={field.name}
+                ref={field.ref}
+                value={field.value}
+                onBlur={field.onBlur}
+                onChange={field.onChange}
+                aria-invalid={fieldState.invalid}
+              />
+            ) : (
+              <RadioGroup
+                name={field.name}
+                value={field.value ?? ""}
+                onValueChange={field.onChange}
+                className="flex w-full flex-row items-center gap-4"
+              >
+                {PENALTY_OPTIONS.map((option) => (
+                  <Label key={option} className="shrink-0">
+                    <RadioGroupItem
+                      value={option}
+                      aria-invalid={fieldState.invalid}
+                    />
+                    {option}
+                  </Label>
+                ))}
+              </RadioGroup>
+            )}
             {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
           </Field>
         );
@@ -173,11 +216,13 @@ function RoundEnd() {
     getTeamById,
   ]);
 
+  const [numberMode, setNumberMode] = useState(false);
+
   const formSchema = useMemo(
     () =>
       z
         .object({
-          penalties: penaltiesSchema,
+          penalties: penaltiesSchema(numberMode),
           trump: z.string(),
         })
         .superRefine((data, ctx) => {
@@ -192,7 +237,7 @@ function RoundEnd() {
             });
           }
         }),
-    [rows],
+    [rows, numberMode],
   );
 
   const form = useForm<FormValues>({
@@ -207,6 +252,8 @@ function RoundEnd() {
 
   const {
     control,
+    clearErrors,
+    setValue,
     handleSubmit,
     formState: { errors },
   } = form;
@@ -228,10 +275,19 @@ function RoundEnd() {
       trump: data.trump,
       penalties: rows.map((row) => ({
         id: row.id,
-        points: selectedPenalty(data.penalties[row.id]),
+        points: penaltyPoints(data.penalties[row.id]),
       })),
     });
     navigate("/game", { replace: true });
+  };
+
+  const toggleNumberMode = () => {
+    setNumberMode((current) => !current);
+    setValue(
+      "penalties",
+      Object.fromEntries(rows.map((row) => [row.id, "0"])),
+    );
+    clearErrors("penalties");
   };
 
   return (
@@ -248,14 +304,36 @@ function RoundEnd() {
         </Button>
       }
     >
-      <SecondHeader>Штрафные очки за раунд</SecondHeader>
+      <SecondHeader
+        actions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            iconSize="lg"
+            className="ml-auto"
+            aria-label={numberMode ? "Радиокнопки" : "Ввод числом"}
+            onClick={toggleNumberMode}
+          >
+            {numberMode ? <CopyCheck /> : <SquarePen />}
+          </Button>
+        }
+      >
+        Штрафные очки за раунд
+      </SecondHeader>
       <form
         id={ROUND_END_FORM_ID}
+        noValidate
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-1 flex-col gap-4 text-left"
       >
         {rows.map((row) => (
-          <PenaltyRowField key={row.id} row={row} control={control} />
+          <PenaltyRowField
+            key={row.id}
+            row={row}
+            control={control}
+            numberMode={numberMode}
+          />
         ))}
         {errors.penalties?.root?.message ? (
           <FieldError errors={[{ message: errors.penalties.root.message }]} />

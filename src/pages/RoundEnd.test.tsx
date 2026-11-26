@@ -75,7 +75,7 @@ function expectPenaltyRadios(label: string) {
 }
 
 describe("RoundEnd page", () => {
-  it("shows the round title, penalty radios, and no number input or mode switch", () => {
+  it("shows the round title, penalty radios, and the switch to number input", () => {
     seedRound({
       selectedPlayerIds: ["p1", "p2"],
       scores: { p1: 4, p2: 0 },
@@ -86,8 +86,8 @@ describe("RoundEnd page", () => {
       screen.getByRole("heading", { name: "Штрафные очки за раунд" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Ввод числом" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("button", { name: "Ввод числом" }),
+    ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Радиокнопки" }),
     ).not.toBeInTheDocument();
@@ -395,5 +395,150 @@ describe("RoundEnd page", () => {
     });
     expect(readPlayers()).toEqual(TEST_PLAYERS);
     expect(readTeams()).toEqual(TEST_TEAMS);
+  });
+
+  it("resets penalties to 0 when switching entry mode and keeps the selected trump", async () => {
+    seedRound({ scores: { p1: 4, p2: 2 } });
+    const user = userEvent.setup();
+    renderRoundEnd();
+
+    await user.click(penaltyRow("Алиса (4)").getByRole("radio", { name: "6" }));
+    await user.click(screen.getByRole("radio", { name: "черви" }));
+    await user.click(screen.getByRole("button", { name: "Ввод числом" }));
+
+    expect(screen.getByText("Алиса (4)")).toBeInTheDocument();
+    expect(screen.getByText("Боб (2)")).toBeInTheDocument();
+    expect(penaltyRow("Алиса (4)").getByRole("spinbutton")).toHaveValue(0);
+    expect(penaltyRow("Боб (2)").getByRole("spinbutton")).toHaveValue(0);
+    expect(penaltyRow("Алиса (4)").queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "черви" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Радиокнопки" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Радиокнопки" }));
+
+    expectPenaltyRadios("Алиса (4)");
+    expectPenaltyRadios("Боб (2)");
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "черви" })).toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Ввод числом" }),
+    ).toBeInTheDocument();
+  });
+
+  it("stores an integer that is not a radio option and advances the round", async () => {
+    seedRound({
+      scores: { p1: 0, p2: 0 },
+      dealerId: "p1",
+      trump: "пики",
+    });
+    const user = userEvent.setup();
+    renderRoundEnd();
+
+    await user.click(screen.getByRole("button", { name: "Ввод числом" }));
+    const alicePenalty = penaltyRow("Алиса (0)").getByRole("spinbutton");
+    await user.clear(alicePenalty);
+    await user.type(alicePenalty, "3");
+    expect(screen.getByText("Алиса (3)")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "черви" }));
+    await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+    expect(await screen.findByRole("heading", { name: "Игра" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(readCurrentGame()).toMatchObject({
+        selectedPlayerIds: ["p1", "p2"],
+        gameStarted: true,
+        trump: "черви",
+        dealerId: "p2",
+        scores: { p1: 3, p2: 0 },
+      });
+    });
+  });
+
+  it("rejects a fractional penalty and stays on the round", async () => {
+    seedRound({ scores: { p1: 0, p2: 0 } });
+    const user = userEvent.setup();
+    renderRoundEnd();
+
+    await user.click(screen.getByRole("button", { name: "Ввод числом" }));
+    const alicePenalty = penaltyRow("Алиса (0)").getByRole("spinbutton");
+    await user.clear(alicePenalty);
+    await user.type(alicePenalty, "1.5");
+    expect(screen.getByText("Алиса (1.5)")).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "крести" }));
+    await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Введите целое число от 0",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Штрафные очки за раунд" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Игра" })).not.toBeInTheDocument();
+    expect(readCurrentGame()).toMatchObject({
+      trump: "пики",
+      dealerId: "p1",
+      scores: { p1: 0, p2: 0 },
+    });
+  });
+
+  it("rejects a negative penalty and stays on the round", async () => {
+    seedRound({ scores: { p1: 4, p2: 2 } });
+    const user = userEvent.setup();
+    renderRoundEnd();
+
+    await user.click(screen.getByRole("button", { name: "Ввод числом" }));
+    const alicePenalty = penaltyRow("Алиса (4)").getByRole("spinbutton");
+    await user.clear(alicePenalty);
+    await user.type(alicePenalty, "-1");
+    expect(screen.getByText("Алиса (3)")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "крести" }));
+    await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Введите целое число от 0",
+    );
+    expect(
+      screen.getByRole("heading", { name: "Штрафные очки за раунд" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Игра" })).not.toBeInTheDocument();
+    expect(readCurrentGame()).toMatchObject({
+      trump: "пики",
+      dealerId: "p1",
+      scores: { p1: 4, p2: 2 },
+    });
+  });
+
+  it("continues when cleared number fields count as zero", async () => {
+    seedRound({
+      scores: { p1: 4, p2: 2 },
+      dealerId: "p1",
+      trump: "пики",
+    });
+    const user = userEvent.setup();
+    renderRoundEnd();
+
+    await user.click(screen.getByRole("button", { name: "Ввод числом" }));
+    await user.clear(penaltyRow("Алиса (4)").getByRole("spinbutton"));
+    await user.clear(penaltyRow("Боб (2)").getByRole("spinbutton"));
+    expect(screen.getByText("Алиса (4)")).toBeInTheDocument();
+    expect(screen.getByText("Боб (2)")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("radio", { name: "черви" }));
+    await user.click(screen.getByRole("button", { name: "Продолжить" }));
+
+    expect(await screen.findByRole("heading", { name: "Игра" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(readCurrentGame()).toMatchObject({
+        selectedPlayerIds: ["p1", "p2"],
+        gameStarted: true,
+        trump: "черви",
+        dealerId: "p2",
+        scores: { p1: 4, p2: 2 },
+      });
+    });
   });
 });
